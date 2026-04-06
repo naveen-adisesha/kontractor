@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kontractor: Project Architecture &amp; File Guide</title>
+  <style>
+    :root{--bg:#0b0d13;--s1:#141722;--s2:#1c2030;--bd:#2a2f42;--tx:#dde0eb;--dim:#7c8198;--ac:#5b8def;--acd:#2f4f8c;--gr:#38c97a;--grd:#15402e;--rd:#ef5b5b;--rdd:#4a1c1c;--or:#f0a040;--ord:#453017;--pu:#a78bfa;--pud:#2c1f5c;--cy:#50cfe0;--yl:#fcd34d}
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--tx);line-height:1.75;padding:2.5rem;max-width:1300px;margin:0 auto}
+    h1{font-size:2.2rem;font-weight:800;background:linear-gradient(135deg,var(--ac),var(--pu));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:.3rem}
+    .sub{font-size:1rem;color:var(--dim);margin-bottom:2rem;border-bottom:1px solid var(--bd);padding-bottom:1.5rem}
+    h2{font-size:1.3rem;font-weight:700;margin:2.5rem 0 1rem;color:var(--ac);display:flex;align-items:center;gap:.5rem}
+    h2 .n{background:var(--acd);color:var(--ac);font-size:.75rem;padding:.15rem .5rem;border-radius:5px;font-weight:700}
+    h3{font-size:1.05rem;font-weight:600;margin:1.5rem 0 .7rem;color:var(--tx)}
+    h4{font-size:.92rem;font-weight:600;margin:1rem 0 .5rem;color:var(--pu)}
+    p{margin-bottom:1rem}
+    .card{background:var(--s1);border:1px solid var(--bd);border-radius:10px;padding:1.25rem;margin-bottom:1.25rem}
+    .card-g{border-left:4px solid var(--gr)}.card-a{border-left:4px solid var(--ac)}.card-o{border-left:4px solid var(--or)}.card-p{border-left:4px solid var(--pu)}
+    .g2{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem}
+    @media(max-width:900px){.g2{grid-template-columns:1fr}}
+    table{border-collapse:collapse;width:100%;margin:1rem 0;font-size:.85rem}
+    th{background:var(--s2);color:var(--ac);padding:.55rem .8rem;text-align:left;border-bottom:2px solid var(--bd);font-weight:600}
+    td{padding:.5rem .8rem;border-bottom:1px solid var(--bd);vertical-align:top}
+    tr:hover td{background:var(--s2)}
+    pre{background:#0e1018;border:1px solid var(--bd);border-radius:8px;padding:1rem;overflow-x:auto;font-family:'JetBrains Mono','Fira Code',monospace;font-size:.76rem;line-height:1.55;margin:1rem 0;color:#c0c5d6}
+    code{font-family:'JetBrains Mono',monospace;background:var(--s2);padding:.1rem .35rem;border-radius:4px;font-size:.85em;color:var(--cy)}
+    a{color:var(--ac);text-decoration:none}a:hover{text-decoration:underline}
+    .tag{display:inline-block;padding:.15rem .5rem;border-radius:5px;font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+    .tg{background:var(--grd);color:var(--gr)}.tr{background:var(--rdd);color:var(--rd)}.to{background:var(--ord);color:var(--or)}.tp{background:var(--pud);color:var(--pu)}.tb{background:rgba(91,141,239,.15);color:var(--ac)}
+    .sep{border:none;border-top:1px solid var(--bd);margin:2rem 0}
+    footer{text-align:center;color:var(--dim);font-size:.78rem;margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--bd)}
+
+    /* === DIAGRAM STYLES === */
+    .diagram{background:var(--s1);border:1px solid var(--bd);border-radius:12px;padding:1.5rem;margin:1.5rem 0;overflow-x:auto}
+    .diagram-title{font-size:.82rem;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-bottom:1rem;text-align:center}
+
+    /* Tree diagram */
+    .tree{font-family:'JetBrains Mono',monospace;font-size:.8rem;line-height:1.8;color:var(--tx)}
+    .tree .dir{color:var(--ac);font-weight:600}
+    .tree .file{color:var(--tx)}
+    .tree .desc{color:var(--dim);font-style:italic;margin-left:.5rem}
+    .tree .hl{color:var(--gr);font-weight:600}
+
+    /* Flow diagrams */
+    .flow-h{display:flex;align-items:stretch;justify-content:center;gap:.3rem;flex-wrap:wrap;padding:.5rem 0}
+    .flow-v{display:flex;flex-direction:column;align-items:center;gap:.3rem;padding:.5rem 0}
+    .box{background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:.6rem 1rem;text-align:center;font-size:.8rem;font-weight:600;min-width:100px}
+    .box.hl{border-color:var(--ac);background:rgba(91,141,239,.1);color:var(--ac)}
+    .box.gr{border-color:var(--gr);background:rgba(56,201,122,.1);color:var(--gr)}
+    .box.pu{border-color:var(--pu);background:rgba(167,139,250,.1);color:var(--pu)}
+    .box.or{border-color:var(--or);background:rgba(240,160,64,.1);color:var(--or)}
+    .box small{display:block;font-weight:400;font-size:.7rem;color:var(--dim);margin-top:.2rem}
+    .arr{color:var(--dim);font-size:1.1rem;display:flex;align-items:center;justify-content:center;min-width:24px}
+    .arr-d{color:var(--dim);font-size:1.1rem;text-align:center;padding:.1rem 0}
+
+    /* Relationship diagram */
+    .rel-grid{display:grid;grid-template-columns:200px 1fr;gap:0;margin:1rem 0}
+    .rel-file{background:var(--s2);border:1px solid var(--bd);padding:.5rem .8rem;font-family:monospace;font-size:.78rem;color:var(--ac);font-weight:600;display:flex;align-items:center}
+    .rel-desc{border-bottom:1px solid var(--bd);padding:.5rem .8rem;font-size:.82rem;display:flex;align-items:center}
+    .rel-arrow{color:var(--gr);margin:0 .5rem}
+
+    /* Conditional diagram */
+    .cond-box{display:grid;grid-template-columns:1fr auto 1fr;gap:.5rem;align-items:start;margin:1rem 0}
+    .cond-if,.cond-else{background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:.8rem;font-size:.78rem}
+    .cond-if{border-color:var(--gr)}
+    .cond-else{border-color:var(--or)}
+    .cond-diamond{background:var(--s1);border:2px solid var(--pu);border-radius:8px;padding:.6rem .8rem;text-align:center;font-size:.78rem;font-weight:600;color:var(--pu);transform:rotate(0deg);align-self:center}
+  </style>
+</head>
+<body>
+
+<h1>Kontractor: Project Architecture</h1>
+<p class="sub">
+  Repository: <a href="https://github.com/naveen-adisesha/kontractor">github.com/naveen-adisesha/kontractor</a>
+  &mdash; How every file works, how they connect, and how data flows through the system
+</p>
+
+<!-- ================================================================ -->
+<h2><span class="n">1</span> Repository Structure</h2>
+
+<div class="diagram">
+  <div class="diagram-title">Project File Tree</div>
+  <div class="tree">
+<span class="dir">kontractor/</span>
+├── <span class="file">README.md</span>              <span class="desc">Project overview, quick start, usage</span>
+├── <span class="file">LICENSE</span>                <span class="desc">Apache 2.0 &mdash; CNCF-required license</span>
+├── <span class="file">CONTRIBUTORS.md</span>        <span class="desc">Author attribution &amp; contribution guide</span>
+├── <span class="file">.gitignore</span>             <span class="desc">Excludes bin/, vendor/, IDE files</span>
+├── <span class="file">go.mod</span>                 <span class="desc">Go module: github.com/kontractor/kontractor</span>
+├── <span class="file">go.sum</span>                 <span class="desc">Dependency checksums (yaml.v3)</span>
+│
+├── <span class="dir">spec/</span>                  <span class="desc hl">THE STANDARD</span>
+│   └── <span class="file">contract-schema.yaml</span>  <span class="desc">JSON Schema defining kontractor.io/v1</span>
+│
+├── <span class="dir">examples/</span>              <span class="desc hl">REFERENCE IMPLEMENTATION</span>
+│   └── <span class="file">echo-server.contract.yaml</span>  <span class="desc">Full contract with TLS conditional</span>
+│
+├── <span class="dir">charts/</span>                <span class="desc hl">DEPLOYABLE HELM CHART</span>
+│   └── <span class="dir">echo-server/</span>
+│       ├── <span class="file">Chart.yaml</span>            <span class="desc">Chart metadata v0.1.0</span>
+│       ├── <span class="file">values.yaml</span>           <span class="desc">Operator-configurable values</span>
+│       └── <span class="dir">templates/</span>
+│           ├── <span class="file">_helpers.tpl</span>      <span class="desc">Name/label/selector helpers</span>
+│           ├── <span class="file">deployment.yaml</span>   <span class="desc">Pod spec with conditional TLS</span>
+│           ├── <span class="file">service.yaml</span>      <span class="desc">ClusterIP service</span>
+│           ├── <span class="file">serviceaccount.yaml</span> <span class="desc">ServiceAccount</span>
+│           └── <span class="file">rbac.yaml</span>         <span class="desc">Role + RoleBinding (namespace-scoped)</span>
+│
+├── <span class="dir">cmd/</span>                   <span class="desc hl">CLI TOOLING</span>
+│   └── <span class="dir">kontractor-validate/</span>
+│       └── <span class="file">main.go</span>           <span class="desc">Parses &amp; displays contracts</span>
+│
+├── <span class="dir">deploy/</span>                <span class="desc">Future: admission webhook chart</span>
+│   └── <span class="dir">webhook/templates/</span>
+│
+└── <span class="dir">docs/</span>                  <span class="desc hl">DOCUMENTATION</span>
+    ├── <span class="file">concept.html</span>          <span class="desc">Concept &amp; benefits write-up</span>
+    └── <span class="file">project-architecture.html</span> <span class="desc">This file</span>
+  </div>
+</div>
+
+<!-- ================================================================ -->
+<h2><span class="n">2</span> How the Pieces Connect</h2>
+
+<div class="diagram">
+  <div class="diagram-title">Component Relationship Diagram</div>
+  <div class="flow-h">
+    <div class="box pu">spec/<br>contract-schema.yaml<small>Defines the standard</small></div>
+    <div class="arr">&rarr;</div>
+    <div class="box hl">examples/<br>echo-server.contract.yaml<small>Implements the standard</small></div>
+    <div class="arr">&rarr;</div>
+    <div class="box gr">cmd/<br>kontractor-validate<small>Reads &amp; validates contracts</small></div>
+  </div>
+  <div style="text-align:center;padding:.5rem 0">
+    <div class="arr-d">&darr; <span style="font-size:.75rem;color:var(--dim)">contract requirements inform chart design</span></div>
+  </div>
+  <div class="flow-h">
+    <div class="box or">charts/echo-server/<br>values.yaml<small>Operator sets features</small></div>
+    <div class="arr">&rarr;</div>
+    <div class="box or">charts/echo-server/<br>templates/<small>Renders K8s manifests</small></div>
+    <div class="arr">&rarr;</div>
+    <div class="box gr">Kubernetes Cluster<small>Running pods, services, RBAC</small></div>
+  </div>
+  <div style="text-align:center;padding:.5rem 0">
+    <div class="arr-d">&darr; <span style="font-size:.75rem;color:var(--dim)">future: webhook reads contract from image</span></div>
+  </div>
+  <div class="flow-h">
+    <div class="box" style="border-style:dashed">deploy/<br>webhook/<small>Admission webhook (planned)</small></div>
+    <div class="arr">&rarr;</div>
+    <div class="box" style="border-style:dashed">Mutate / Validate<small>Auto-inject from contract</small></div>
+  </div>
+</div>
+
+<!-- ================================================================ -->
+<h2><span class="n">3</span> File-by-File Deep Dive</h2>
+
+<!-- --- SPEC --- -->
+<h3>3.1 <code>spec/contract-schema.yaml</code> &mdash; The Standard</h3>
+<div class="card card-p">
+  <p>This is the <strong>heart of the project</strong>. It defines the <code>kontractor.io/v1</code> ContainerContract schema using JSON Schema (2020-12 draft). Every other file either implements this schema or consumes it.</p>
+
+  <div class="diagram">
+    <div class="diagram-title">Schema Structure</div>
+<pre style="margin:0;border:none;background:transparent">ContainerContract
+├── apiVersion: "kontractor.io/v1"
+├── kind: "ContainerContract"
+├── metadata
+│   ├── name          ← unique contract identifier
+│   ├── version       ← tracks image version
+│   ├── image         ← container image repo
+│   └── description
+└── spec
+    ├── <span style="color:var(--pu)">features</span>       ← named boolean flags (tls, ha, backup...)
+    │   └── {name}: { description, default }
+    ├── <span style="color:var(--gr)">env</span>            ← environment variable requirements
+    │   ├── required[]    ← must always be set
+    │   ├── optional[]    ← defaults provided
+    │   └── conditional[] ← gated by features
+    │       └── { when: {feature: X}, env: [...] }
+    ├── <span style="color:var(--gr)">mounts</span>         ← volume mount requirements
+    │   ├── required[]    ← always needed (e.g. /tmp)
+    │   ├── optional[]
+    │   └── conditional[] ← e.g. TLS secret mount
+    ├── <span style="color:var(--or)">secrets</span>        ← K8s secrets needed
+    ├── <span style="color:var(--or)">configMaps</span>     ← K8s configmaps needed
+    ├── <span style="color:var(--cy)">ports</span>          ← container ports exposed
+    ├── <span style="color:var(--cy)">health</span>         ← startup/readiness/liveness probes
+    ├── <span style="color:var(--rd)">security</span>       ← security context requirements
+    ├── <span style="color:var(--rd)">rbac</span>           ← RBAC rules needed (namespace + cluster)
+    └── <span style="color:var(--yl)">initContainers</span> ← init container specifications</pre>
+  </div>
+
+  <h4>Key Schema Features</h4>
+  <table>
+    <thead><tr><th>Feature</th><th>Schema Type</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td><code>whenClause</code></td><td>oneOf (feature / all / any / not / env)</td><td>Conditional expressions for gating requirements</td></tr>
+      <tr><td><code>mount.type</code></td><td>enum</td><td>ephemeral, persistent, secret, configMap, ephemeral-subpath</td></tr>
+      <tr><td><code>probe.when</code></td><td>conditionalOverride</td><td>Override probe settings when features are enabled</td></tr>
+      <tr><td><code>envVar.secretRef</code></td><td>object</td><td>Reference env value from K8s secret</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- --- EXAMPLE --- -->
+<h3>3.2 <code>examples/echo-server.contract.yaml</code> &mdash; Reference Contract</h3>
+<div class="card card-g">
+  <p>A complete, working contract for the <code>hashicorp/http-echo</code> image. Demonstrates all major contract features including a TLS conditional.</p>
+
+  <div class="diagram">
+    <div class="diagram-title">Contract Data Flow: How Features Gate Requirements</div>
+    <div class="cond-box">
+      <div class="cond-if">
+        <strong style="color:var(--gr)">tls: false (default)</strong>
+        <hr style="border-color:var(--bd);margin:.5rem 0">
+        <div style="font-family:monospace;font-size:.72rem">
+          env: ECHO_TEXT, ECHO_PORT<br>
+          mounts: /tmp (64Mi emptyDir)<br>
+          ports: 8080/TCP<br>
+          probe: HTTP /:8080<br>
+          security: uid 1000, readOnly
+        </div>
+      </div>
+      <div class="cond-diamond">feature<br>tls?</div>
+      <div class="cond-else">
+        <strong style="color:var(--or)">tls: true</strong>
+        <hr style="border-color:var(--bd);margin:.5rem 0">
+        <div style="font-family:monospace;font-size:.72rem">
+          env: <span style="color:var(--or)">+ TLS_ENABLED</span><br>
+          &nbsp;&nbsp;&nbsp;&nbsp; <span style="color:var(--or)">+ TLS_CERT_PATH</span><br>
+          &nbsp;&nbsp;&nbsp;&nbsp; <span style="color:var(--or)">+ TLS_KEY_PATH</span><br>
+          mounts: <span style="color:var(--or)">+ /etc/tls (secret)</span><br>
+          secrets: <span style="color:var(--or)">+ ${RELEASE}-tls</span><br>
+          probe: <span style="color:var(--or)">scheme &rarr; HTTPS</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- --- HELM CHART --- -->
+<h3>3.3 <code>charts/echo-server/</code> &mdash; Sample Helm Chart</h3>
+<div class="card card-a">
+  <p>A production-quality Helm chart that deploys the echo-server with contract-compliant RBAC, security context, and conditional TLS support.</p>
+
+  <div class="diagram">
+    <div class="diagram-title">Helm Chart Template Rendering Flow</div>
+    <div class="flow-h">
+      <div class="box or">values.yaml<small>contract.features.tls<br>echo.text, echo.port<br>resources, replicas</small></div>
+      <div class="arr">&rarr;</div>
+      <div class="box hl">_helpers.tpl<small>name, fullname<br>labels, selectors<br>serviceAccountName</small></div>
+      <div class="arr">&rarr;</div>
+      <div class="box" style="display:flex;flex-direction:column;gap:.3rem;padding:.4rem">
+        <div class="box gr" style="min-width:auto;padding:.3rem .5rem">deployment.yaml</div>
+        <div class="box gr" style="min-width:auto;padding:.3rem .5rem">service.yaml</div>
+        <div class="box gr" style="min-width:auto;padding:.3rem .5rem">rbac.yaml</div>
+        <div class="box gr" style="min-width:auto;padding:.3rem .5rem">serviceaccount.yaml</div>
+      </div>
+      <div class="arr">&rarr;</div>
+      <div class="box gr">Kubernetes<br>API Server<small>kubectl apply</small></div>
+    </div>
+  </div>
+
+  <h4>Template Files</h4>
+  <table>
+    <thead><tr><th>File</th><th>Generates</th><th>Contract Connection</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code>values.yaml</code></td>
+        <td>&mdash;</td>
+        <td><code>contract.features.tls</code> toggles feature flag. <code>tls.secretName</code> provides operator-specific secret name. Everything else (ports, probes, security, RBAC rules) is hardcoded from the contract.</td>
+      </tr>
+      <tr>
+        <td><code>_helpers.tpl</code></td>
+        <td>Template helpers</td>
+        <td>Adds <code>kontractor.io/contract</code> and <code>kontractor.io/contract-version</code> labels to all resources for traceability.</td>
+      </tr>
+      <tr>
+        <td><code>deployment.yaml</code></td>
+        <td>Deployment + Pod spec</td>
+        <td>
+          <strong>Always:</strong> /tmp emptyDir, port 8080, HTTP probes, security context (uid 1000, readOnly, drop ALL)<br>
+          <strong>When tls:</strong> TLS env vars injected, <code>tls-certs</code> secret volume mounted at <code>/etc/tls</code><br>
+          Annotations include <code>kontractor.io/feature.tls: "true|false"</code>
+        </td>
+      </tr>
+      <tr>
+        <td><code>service.yaml</code></td>
+        <td>ClusterIP Service</td>
+        <td>Exposes port from contract's <code>ports[0]</code></td>
+      </tr>
+      <tr>
+        <td><code>rbac.yaml</code></td>
+        <td>Role + RoleBinding</td>
+        <td>Rules match contract's <code>rbac.rules</code> exactly: configmaps + secrets [get, list, watch]. Annotated with <code>kontractor.io/source: contract:echo-server:rbac.rules</code></td>
+      </tr>
+      <tr>
+        <td><code>serviceaccount.yaml</code></td>
+        <td>ServiceAccount</td>
+        <td>Annotated with <code>kontractor.io/managed: "true"</code></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- --- DEPLOYMENT DIAGRAM --- -->
+<div class="diagram">
+  <div class="diagram-title">What Gets Created in Kubernetes</div>
+  <div class="g2">
+    <div>
+      <h4 style="text-align:center;margin-top:0">tls: false (default)</h4>
+      <div class="flow-v">
+        <div class="box gr">ServiceAccount<small>echo-server</small></div>
+        <div class="arr-d">&darr;</div>
+        <div class="box gr">Role<small>configmaps, secrets [get,list,watch]</small></div>
+        <div class="arr-d">&darr;</div>
+        <div class="box gr">RoleBinding<small>echo-server &rarr; Role</small></div>
+        <div class="arr-d">&darr;</div>
+        <div class="box hl" style="width:100%">Deployment<small>
+          container: hashicorp/http-echo<br>
+          env: ECHO_TEXT, ECHO_PORT<br>
+          volumes: tmp (emptyDir 64Mi)<br>
+          securityContext: uid 1000, readOnly
+        </small></div>
+        <div class="arr-d">&darr;</div>
+        <div class="box gr">Service<small>ClusterIP :5678 &rarr; :5678</small></div>
+      </div>
+    </div>
+    <div>
+      <h4 style="text-align:center;margin-top:0">tls: true</h4>
+      <div class="flow-v">
+        <div class="box gr">ServiceAccount<small>echo-server</small></div>
+        <div class="arr-d">&darr;</div>
+        <div class="box gr">Role<small>configmaps, secrets [get,list,watch]</small></div>
+        <div class="arr-d">&darr;</div>
+        <div class="box gr">RoleBinding<small>echo-server &rarr; Role</small></div>
+        <div class="arr-d">&darr;</div>
+        <div class="box hl" style="width:100%;border-color:var(--or)">Deployment<small>
+          container: hashicorp/http-echo<br>
+          env: ECHO_TEXT, ECHO_PORT,<br>
+          &nbsp;&nbsp;<span style="color:var(--or)">TLS_ENABLED, TLS_CERT_PATH, TLS_KEY_PATH</span><br>
+          volumes: tmp (emptyDir),<br>
+          &nbsp;&nbsp;<span style="color:var(--or)">tls-certs (secret: echo-server-tls)</span><br>
+          mounts: /tmp,<br>
+          &nbsp;&nbsp;<span style="color:var(--or)">/etc/tls (readOnly)</span>
+        </small></div>
+        <div class="arr-d">&darr;</div>
+        <div class="box gr">Service<small>ClusterIP :5678 &rarr; :5678</small></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- --- CLI --- -->
+<h3>3.4 <code>cmd/kontractor-validate/main.go</code> &mdash; CLI Validator</h3>
+<div class="card card-g">
+  <p>A Go CLI that parses a contract YAML file and displays its contents in a structured format. This is the first step toward full validation.</p>
+
+  <div class="diagram">
+    <div class="diagram-title">CLI Data Flow</div>
+    <div class="flow-h">
+      <div class="box pu">.contract.yaml<small>on disk or in image</small></div>
+      <div class="arr">&rarr;</div>
+      <div class="box hl">YAML Parser<small>gopkg.in/yaml.v3</small></div>
+      <div class="arr">&rarr;</div>
+      <div class="box hl">Go Structs<small>ContainerContract<br>Spec, Env, Mount...</small></div>
+      <div class="arr">&rarr;</div>
+      <div class="box gr">Formatted Output<small>Features, Env, Mounts<br>Ports, RBAC, Security</small></div>
+    </div>
+  </div>
+
+  <h4>Go Type Hierarchy</h4>
+<pre style="font-size:.74rem">ContainerContract
+├── Metadata { Name, Version, Image, Description }
+└── Spec
+    ├── Features        map[string]Feature { Description, Default }
+    ├── Env             EnvSpec
+    │   ├── Required    []EnvVar { Name, Description, Default, Value }
+    │   ├── Optional    []EnvVar
+    │   └── Conditional []ConditionalEnvGroup { When, Env }
+    ├── Mounts          MountSpec
+    │   ├── Required    []Mount { Path, Type, MaxSize, SecretName }
+    │   └── Conditional []ConditionalMountGroup { When, Mounts }
+    ├── Ports           []Port { Name, ContainerPort, Protocol }
+    ├── Health          HealthSpec { Startup, Readiness, Liveness *Probe }
+    ├── Security        SecuritySpec { RunAsNonRoot, ReadOnly, UID, Caps }
+    └── RBAC            RBACSpec { Rules, ClusterRules []RBACRule }</pre>
+
+  <h4>Example Output</h4>
+<pre style="font-size:.74rem">$ kontractor-validate examples/echo-server.contract.yaml
+
+Contract: echo-server v1.0.0
+Image:    hashicorp/http-echo
+Description: A simple HTTP echo server that returns a configurable message
+
+=== Features ===
+  [tls] Enable HTTPS with TLS certificates... (default: false)
+
+=== Required Environment Variables ===
+  ECHO_TEXT = Hello from Kontractor!
+  ECHO_PORT = 8080
+
+=== Required Mounts ===
+  /tmp [ephemeral] 64Mi
+
+=== Conditional Mounts (when: tls) ===
+  /etc/tls [secret] TLS certificate and private key
+
+=== Ports ===
+  http: 8080/TCP - HTTP endpoint
+
+=== RBAC Rules ===
+  [] [configmaps] [get list watch]
+  [] [secrets] [get list watch]
+
+=== Security ===
+  runAsNonRoot: true
+  readOnlyRootFilesystem: true
+  preferredUid: 1000
+  dropCapabilities: [ALL]
+
+[PASS] Contract is valid.</pre>
+</div>
+
+<!-- ================================================================ -->
+<h2><span class="n">4</span> End-to-End Flow: From Contract to Running Pod</h2>
+
+<div class="diagram">
+  <div class="diagram-title">Complete Lifecycle</div>
+
+  <div class="flow-h" style="margin-bottom:.5rem">
+    <div class="box pu" style="min-width:140px">1. Developer<small>writes contract YAML<br>alongside application code</small></div>
+    <div class="arr">&rarr;</div>
+    <div class="box pu" style="min-width:140px">2. CI Pipeline<small>builds image + embeds<br>contract at /.kontractor.yaml</small></div>
+    <div class="arr">&rarr;</div>
+    <div class="box" style="min-width:140px">3. Registry<small>image + contract<br>stored together</small></div>
+  </div>
+
+  <div style="text-align:center"><div class="arr-d">&darr;</div></div>
+
+  <div class="flow-h" style="margin-bottom:.5rem">
+    <div class="box or" style="min-width:140px">4. Operator<small>sets feature flags<br>in Helm values</small></div>
+    <div class="arr">&rarr;</div>
+    <div class="box hl" style="min-width:140px">5. Helm Render<small>templates generate<br>K8s manifests</small></div>
+    <div class="arr">&rarr;</div>
+    <div class="box hl" style="min-width:140px">6. kubectl apply<small>pod spec sent<br>to API server</small></div>
+  </div>
+
+  <div style="text-align:center"><div class="arr-d">&darr;</div></div>
+
+  <div class="flow-h">
+    <div class="box" style="min-width:140px;border-style:dashed">7. Webhook (future)<small>reads contract<br>validates/mutates pod</small></div>
+    <div class="arr">&rarr;</div>
+    <div class="box gr" style="min-width:140px">8. Pod Running<small>all requirements met<br>contract-compliant</small></div>
+    <div class="arr">&rarr;</div>
+    <div class="box gr" style="min-width:140px">9. Verify<small>kontractor-validate<br>confirms compliance</small></div>
+  </div>
+</div>
+
+<!-- ================================================================ -->
+<h2><span class="n">5</span> Live Deployment Verification</h2>
+
+<div class="card card-g">
+  <p>The echo-server was deployed to a live Kubernetes cluster in both modes. Here is the evidence:</p>
+
+  <h4>Default Mode (tls: false)</h4>
+  <table>
+    <thead><tr><th>Check</th><th>Result</th></tr></thead>
+    <tbody>
+      <tr><td>Pod status</td><td><span class="tag tg">1/1 Running</span></td></tr>
+      <tr><td>Annotation <code>kontractor.io/feature.tls</code></td><td><code>"false"</code></td></tr>
+      <tr><td>Volumes</td><td><code>tmp</code> (emptyDir 64Mi)</td></tr>
+      <tr><td>Env vars</td><td>ECHO_TEXT, ECHO_PORT</td></tr>
+      <tr><td>Curl response</td><td><code>Hello from Kontractor!</code></td></tr>
+    </tbody>
+  </table>
+
+  <h4>TLS Mode (tls: true)</h4>
+  <table>
+    <thead><tr><th>Check</th><th>Result</th></tr></thead>
+    <tbody>
+      <tr><td>Pod status</td><td><span class="tag tg">1/1 Running</span></td></tr>
+      <tr><td>Annotation <code>kontractor.io/feature.tls</code></td><td><code>"true"</code></td></tr>
+      <tr><td>Volumes</td><td><code>tmp</code> (emptyDir) + <code>tls-certs</code> (secret: echo-server-tls)</td></tr>
+      <tr><td>Volume mount /etc/tls</td><td>readOnly: true, contains tls.crt + tls.key</td></tr>
+      <tr><td>Env vars</td><td>ECHO_TEXT, ECHO_PORT + <span style="color:var(--or)">TLS_ENABLED, TLS_CERT_PATH, TLS_KEY_PATH</span></td></tr>
+      <tr><td>Curl response</td><td><code>Hello from Kontractor with TLS!</code></td></tr>
+      <tr><td>RBAC Role rules</td><td>configmaps [get,list,watch], secrets [get,list,watch]</td></tr>
+      <tr><td>Role annotation</td><td><code>kontractor.io/source: contract:echo-server:rbac.rules</code></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ================================================================ -->
+<h2><span class="n">6</span> How Conditional TLS Works in Detail</h2>
+
+<div class="diagram">
+  <div class="diagram-title">Conditional Flow Through the System</div>
+
+  <div class="flow-h" style="margin-bottom:1rem">
+    <div class="box or">Operator sets<small>contract.features.tls: true<br>in values.yaml or --set</small></div>
+    <div class="arr">&rarr;</div>
+    <div class="box hl">deployment.yaml<small>{{- if .Values.contract.features.tls }}<br>evaluates to true</small></div>
+    <div class="arr">&rarr;</div>
+    <div class="box" style="text-align:left;font-size:.72rem;font-family:monospace;min-width:220px">
+      <span style="color:var(--gr)">env:</span><br>
+      &nbsp;&nbsp;- TLS_ENABLED: "true"<br>
+      &nbsp;&nbsp;- TLS_CERT_PATH: /etc/tls/tls.crt<br>
+      &nbsp;&nbsp;- TLS_KEY_PATH: /etc/tls/tls.key<br>
+      <span style="color:var(--gr)">volumeMounts:</span><br>
+      &nbsp;&nbsp;- /etc/tls (readOnly)<br>
+      <span style="color:var(--gr)">volumes:</span><br>
+      &nbsp;&nbsp;- secret: echo-server-tls
+    </div>
+  </div>
+
+  <p style="text-align:center;font-size:.82rem;color:var(--dim)">The contract declares what TLS needs. The template implements the conditional. The webhook (future) will validate and auto-inject.</p>
+</div>
+
+<div class="g2">
+  <div class="card card-a">
+    <h4>In the Contract (what the container declares)</h4>
+<pre style="font-size:.72rem;margin:.5rem 0">conditional:
+  - when: { feature: tls }
+    mounts:
+      - path: /etc/tls
+        type: secret
+        secretName: "${RELEASE}-tls"
+        keys: ["tls.crt", "tls.key"]
+        readOnly: true</pre>
+  </div>
+  <div class="card card-a">
+    <h4>In the Template (how Helm renders it)</h4>
+<pre style="font-size:.72rem;margin:.5rem 0">{{- if .Values.contract.features.tls }}
+- name: tls-certs
+  secret:
+    secretName: {{ .Values.tls.secretName |
+      default (printf "%s-tls"
+        (include "echo-server.fullname" .)) }}
+{{- end }}</pre>
+  </div>
+</div>
+
+<!-- ================================================================ -->
+<h2><span class="n">7</span> Roadmap &amp; Future Architecture</h2>
+
+<div class="diagram">
+  <div class="diagram-title">Vision: Full Kontractor Architecture</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.5rem">
+    <div class="box gr" style="grid-column:1/4">
+      <strong>Build Time</strong>
+      <small>Developer writes contract &rarr; CI embeds in image as OCI artifact &rarr; <code>kontractor lint</code> validates schema</small>
+    </div>
+    <div class="box hl">
+      <strong>Deploy Time</strong>
+      <small>Helm renders minimal values<br>Webhook intercepts pod creation</small>
+    </div>
+    <div class="box pu">
+      <strong>Validate</strong>
+      <small>Webhook reads contract<br>Checks: secrets exist? mounts present?<br>Rejects with clear error if not</small>
+    </div>
+    <div class="box or">
+      <strong>Mutate</strong>
+      <small>Auto-injects missing volumes,<br>env vars, security context<br>from contract</small>
+    </div>
+    <div class="box gr" style="grid-column:1/4">
+      <strong>Runtime</strong>
+      <small>Pod runs contract-compliant &rarr; <code>kontractor status</code> shows live compliance &rarr; Prometheus metrics for drift detection</small>
+    </div>
+  </div>
+</div>
+
+<table>
+  <thead><tr><th>Version</th><th>What Ships</th><th>Status</th></tr></thead>
+  <tbody>
+    <tr><td>v0.1.0</td><td>Schema, CLI (<code>kontractor-validate</code>), sample chart, docs</td><td><span class="tag tg">Shipped</span></td></tr>
+    <tr><td>v0.2.0</td><td>Audit webhook (warns on unmet requirements, never blocks)</td><td><span class="tag to">Next</span></td></tr>
+    <tr><td>v0.3.0</td><td>Validate webhook (rejects pods missing required resources)</td><td><span class="tag tp">Planned</span></td></tr>
+    <tr><td>v0.4.0</td><td>Mutate webhook (auto-injects volumes, env, mounts from contract)</td><td><span class="tag tp">Planned</span></td></tr>
+    <tr><td>v0.5.0</td><td>OCI Referrer integration (read contracts without pulling image)</td><td><span class="tag tp">Planned</span></td></tr>
+    <tr><td>v1.0.0</td><td>Production-ready: HA webhook, <code>kontractor generate</code>, Helm library</td><td><span class="tag tp">Planned</span></td></tr>
+  </tbody>
+</table>
+
+<hr class="sep">
+
+<footer>
+  Kontractor v0.1.0 &mdash; <a href="https://github.com/naveen-adisesha/kontractor">github.com/naveen-adisesha/kontractor</a><br>
+  Apache License 2.0 &mdash; Generated April 6, 2026
+</footer>
+
+</body>
+</html>
