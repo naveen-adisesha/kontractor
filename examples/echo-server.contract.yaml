@@ -1,0 +1,108 @@
+apiVersion: kontractor.io/v1
+kind: ContainerContract
+metadata:
+  name: echo-server
+  version: "1.0.0"
+  image: hashicorp/http-echo
+  description: "A simple HTTP echo server that returns a configurable message"
+
+spec:
+  features:
+    tls:
+      description: "Enable HTTPS with TLS certificates mounted from a Kubernetes secret"
+      default: false
+
+  env:
+    required:
+      - name: ECHO_TEXT
+        description: "The text message the server will return on every request"
+        default: "Hello from Kontractor!"
+        example: "Hello, World!"
+      - name: ECHO_PORT
+        description: "Port the HTTP server listens on"
+        default: "8080"
+    conditional:
+      - when: { feature: tls }
+        env:
+          - name: TLS_ENABLED
+            value: "true"
+            description: "Flag indicating TLS is active"
+          - name: TLS_CERT_PATH
+            default: "/etc/tls/tls.crt"
+            description: "Path to TLS certificate file"
+          - name: TLS_KEY_PATH
+            default: "/etc/tls/tls.key"
+            description: "Path to TLS private key file"
+
+  mounts:
+    required:
+      - path: /tmp
+        type: ephemeral
+        maxSize: 64Mi
+        description: "Scratch space for temporary files"
+    conditional:
+      - when: { feature: tls }
+        mounts:
+          - path: /etc/tls
+            type: secret
+            secretName: "${RELEASE}-tls"
+            keys: ["tls.crt", "tls.key"]
+            readOnly: true
+            description: "TLS certificate and private key"
+
+  secrets:
+    conditional:
+      - when: { feature: tls }
+        secrets:
+          - name: "${RELEASE}-tls"
+            keys: ["tls.crt", "tls.key"]
+            description: "TLS certificate secret (create with: kubectl create secret tls <name> --cert=tls.crt --key=tls.key)"
+
+  ports:
+    - name: http
+      containerPort: 8080
+      protocol: TCP
+      description: "HTTP endpoint"
+
+  health:
+    readiness:
+      httpGet:
+        path: /healthz
+        port: 8080
+        scheme: HTTP
+      initialDelaySeconds: 5
+      periodSeconds: 10
+      timeoutSeconds: 3
+      failureThreshold: 3
+      successThreshold: 1
+      when:
+        feature: tls
+        override:
+          httpGet:
+            scheme: HTTPS
+    liveness:
+      httpGet:
+        path: /healthz
+        port: 8080
+        scheme: HTTP
+      initialDelaySeconds: 10
+      periodSeconds: 30
+      timeoutSeconds: 3
+      failureThreshold: 3
+      successThreshold: 1
+
+  security:
+    runAsNonRoot: true
+    readOnlyRootFilesystem: true
+    dropCapabilities: ["ALL"]
+    preferredUid: 1000
+    preferredGid: 1000
+
+  rbac:
+    rules:
+      - apiGroups: [""]
+        resources: ["configmaps"]
+        verbs: ["get", "list", "watch"]
+      - apiGroups: [""]
+        resources: ["secrets"]
+        verbs: ["get", "list", "watch"]

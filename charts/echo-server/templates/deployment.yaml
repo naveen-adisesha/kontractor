@@ -1,0 +1,96 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "echo-server.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "echo-server.labels" . | nindent 4 }}
+  annotations:
+    kontractor.io/contract: "echo-server"
+    kontractor.io/contract-version: "1.0.0"
+    kontractor.io/feature.tls: {{ .Values.contract.features.tls | quote }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "echo-server.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "echo-server.selectorLabels" . | nindent 8 }}
+      annotations:
+        kontractor.io/contract: "echo-server"
+        kontractor.io/feature.tls: {{ .Values.contract.features.tls | quote }}
+    spec:
+      serviceAccountName: {{ include "echo-server.serviceAccountName" . }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: echo-server
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          args:
+            - "-listen=:{{ .Values.echo.port }}"
+            - "-text={{ .Values.echo.text }}"
+          env:
+            - name: ECHO_TEXT
+              value: {{ .Values.echo.text | quote }}
+            - name: ECHO_PORT
+              value: {{ .Values.echo.port | quote }}
+            {{- if .Values.contract.features.tls }}
+            - name: TLS_ENABLED
+              value: "true"
+            - name: TLS_CERT_PATH
+              value: "/etc/tls/tls.crt"
+            - name: TLS_KEY_PATH
+              value: "/etc/tls/tls.key"
+            {{- end }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.echo.port }}
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+              scheme: HTTP
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            {{- if .Values.contract.features.tls }}
+            - name: tls-certs
+              mountPath: /etc/tls
+              readOnly: true
+            {{- end }}
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi
+        {{- if .Values.contract.features.tls }}
+        - name: tls-certs
+          secret:
+            secretName: {{ .Values.tls.secretName | default (printf "%s-tls" (include "echo-server.fullname" .)) }}
+        {{- end }}

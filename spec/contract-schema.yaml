@@ -1,0 +1,352 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://kontractor.io/schemas/contract/v1"
+title: "Kontractor Container Contract"
+description: >
+  A declarative specification for container infrastructure requirements.
+  Embedded in or attached to a container image, this contract tells the
+  platform what the container needs to run correctly.
+type: object
+required: ["apiVersion", "kind", "metadata", "spec"]
+
+properties:
+  apiVersion:
+    type: string
+    const: "kontractor.io/v1"
+
+  kind:
+    type: string
+    const: "ContainerContract"
+
+  metadata:
+    type: object
+    required: ["name", "version"]
+    properties:
+      name:
+        type: string
+        description: "Unique identifier for this contract"
+      version:
+        type: string
+        description: "Semantic version of this contract (tracks image version)"
+      image:
+        type: string
+        description: "Container image repository this contract applies to"
+      description:
+        type: string
+
+  spec:
+    type: object
+    properties:
+
+      features:
+        type: object
+        description: >
+          Named boolean feature flags that gate conditional requirements.
+          Operators enable features via pod annotations or Helm values.
+        additionalProperties:
+          type: object
+          properties:
+            description:
+              type: string
+            default:
+              type: boolean
+              default: false
+
+      env:
+        type: object
+        properties:
+          required:
+            type: array
+            items: { $ref: "#/$defs/envVar" }
+          optional:
+            type: array
+            items: { $ref: "#/$defs/envVar" }
+          conditional:
+            type: array
+            items: { $ref: "#/$defs/conditionalEnvGroup" }
+
+      mounts:
+        type: object
+        properties:
+          required:
+            type: array
+            items: { $ref: "#/$defs/mount" }
+          optional:
+            type: array
+            items: { $ref: "#/$defs/mount" }
+          conditional:
+            type: array
+            items: { $ref: "#/$defs/conditionalMountGroup" }
+
+      secrets:
+        type: object
+        properties:
+          required:
+            type: array
+            items: { $ref: "#/$defs/secretRef" }
+          conditional:
+            type: array
+            items: { $ref: "#/$defs/conditionalSecretGroup" }
+
+      configMaps:
+        type: object
+        properties:
+          required:
+            type: array
+            items: { $ref: "#/$defs/configMapRef" }
+          conditional:
+            type: array
+            items: { $ref: "#/$defs/conditionalConfigMapGroup" }
+
+      ports:
+        type: array
+        items: { $ref: "#/$defs/port" }
+
+      health:
+        type: object
+        properties:
+          startup:  { $ref: "#/$defs/probe" }
+          readiness: { $ref: "#/$defs/probe" }
+          liveness:  { $ref: "#/$defs/probe" }
+
+      security:
+        type: object
+        properties:
+          runAsNonRoot:
+            type: boolean
+          readOnlyRootFilesystem:
+            type: boolean
+          dropCapabilities:
+            type: array
+            items: { type: string }
+          preferredUid:
+            type: integer
+          preferredGid:
+            type: integer
+          when:
+            $ref: "#/$defs/conditionalOverride"
+
+      rbac:
+        type: object
+        properties:
+          rules:
+            type: array
+            items: { $ref: "#/$defs/rbacRule" }
+          clusterRules:
+            type: array
+            items: { $ref: "#/$defs/rbacRule" }
+
+      initContainers:
+        type: object
+        properties:
+          required:
+            type: array
+            items: { $ref: "#/$defs/initSpec" }
+          conditional:
+            type: array
+            items: { $ref: "#/$defs/conditionalInitGroup" }
+
+$defs:
+  whenClause:
+    description: "Condition expression for gating requirements"
+    oneOf:
+      - type: object
+        properties:
+          feature: { type: string }
+        required: ["feature"]
+      - type: object
+        properties:
+          all:
+            type: array
+            items: { $ref: "#/$defs/whenClause" }
+        required: ["all"]
+      - type: object
+        properties:
+          any:
+            type: array
+            items: { $ref: "#/$defs/whenClause" }
+        required: ["any"]
+      - type: object
+        properties:
+          not: { $ref: "#/$defs/whenClause" }
+        required: ["not"]
+      - type: object
+        properties:
+          env:
+            type: object
+            properties:
+              name: { type: string }
+              equals: { type: string }
+            required: ["name", "equals"]
+        required: ["env"]
+
+  envVar:
+    type: object
+    required: ["name"]
+    properties:
+      name: { type: string }
+      description: { type: string }
+      default: { type: string }
+      example: { type: string }
+      value: { type: string }
+      secretRef:
+        type: object
+        properties:
+          name: { type: string }
+          key: { type: string }
+
+  mount:
+    type: object
+    required: ["path", "type"]
+    properties:
+      path: { type: string }
+      type:
+        type: string
+        enum: ["ephemeral", "persistent", "secret", "configMap", "ephemeral-subpath"]
+      description: { type: string }
+      maxSize: { type: string }
+      minSize: { type: string }
+      accessMode:
+        type: string
+        enum: ["ReadWriteOnce", "ReadWriteMany", "ReadOnlyMany"]
+      secretName: { type: string }
+      configMapName: { type: string }
+      keys:
+        type: array
+        items: { type: string }
+      subPath: { type: string }
+      readOnly: { type: boolean }
+
+  secretRef:
+    type: object
+    required: ["name"]
+    properties:
+      name: { type: string }
+      keys:
+        type: array
+        items: { type: string }
+      mountPath: { type: string }
+      description: { type: string }
+
+  configMapRef:
+    type: object
+    required: ["name"]
+    properties:
+      name: { type: string }
+      keys:
+        type: array
+        items: { type: string }
+      description: { type: string }
+
+  port:
+    type: object
+    required: ["name", "containerPort", "protocol"]
+    properties:
+      name: { type: string }
+      containerPort: { type: integer }
+      protocol:
+        type: string
+        enum: ["TCP", "UDP"]
+      description: { type: string }
+
+  probe:
+    type: object
+    properties:
+      httpGet:
+        type: object
+        properties:
+          path: { type: string }
+          port: { type: integer }
+          scheme: { type: string, enum: ["HTTP", "HTTPS"] }
+      tcpSocket:
+        type: object
+        properties:
+          port: { type: integer }
+      exec:
+        type: object
+        properties:
+          command:
+            type: array
+            items: { type: string }
+      initialDelaySeconds: { type: integer }
+      periodSeconds: { type: integer }
+      timeoutSeconds: { type: integer }
+      failureThreshold: { type: integer }
+      successThreshold: { type: integer }
+      when: { $ref: "#/$defs/conditionalOverride" }
+
+  rbacRule:
+    type: object
+    properties:
+      apiGroups:
+        type: array
+        items: { type: string }
+      resources:
+        type: array
+        items: { type: string }
+      verbs:
+        type: array
+        items: { type: string }
+      nonResourceURLs:
+        type: array
+        items: { type: string }
+
+  initSpec:
+    type: object
+    required: ["name"]
+    properties:
+      name: { type: string }
+      description: { type: string }
+      purpose: { type: string }
+      sourceMount: { type: string }
+      targetMount: { type: string }
+
+  conditionalOverride:
+    type: object
+    properties:
+      feature: { type: string }
+      override: { type: object }
+
+  conditionalEnvGroup:
+    type: object
+    required: ["when", "env"]
+    properties:
+      when: { $ref: "#/$defs/whenClause" }
+      env:
+        type: array
+        items: { $ref: "#/$defs/envVar" }
+
+  conditionalMountGroup:
+    type: object
+    required: ["when", "mounts"]
+    properties:
+      when: { $ref: "#/$defs/whenClause" }
+      mounts:
+        type: array
+        items: { $ref: "#/$defs/mount" }
+
+  conditionalSecretGroup:
+    type: object
+    required: ["when", "secrets"]
+    properties:
+      when: { $ref: "#/$defs/whenClause" }
+      secrets:
+        type: array
+        items: { $ref: "#/$defs/secretRef" }
+
+  conditionalConfigMapGroup:
+    type: object
+    required: ["when", "configMaps"]
+    properties:
+      when: { $ref: "#/$defs/whenClause" }
+      configMaps:
+        type: array
+        items: { $ref: "#/$defs/configMapRef" }
+
+  conditionalInitGroup:
+    type: object
+    required: ["when", "initContainers"]
+    properties:
+      when: { $ref: "#/$defs/whenClause" }
+      initContainers:
+        type: array
+        items: { $ref: "#/$defs/initSpec" }

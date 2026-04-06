@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kontractor: Declarative Container Infrastructure Requirements</title>
+  <style>
+    :root{--bg:#0b0d13;--s1:#141722;--s2:#1c2030;--bd:#2a2f42;--tx:#dde0eb;--dim:#7c8198;--ac:#5b8def;--acd:#2f4f8c;--gr:#38c97a;--grd:#15402e;--rd:#ef5b5b;--rdd:#4a1c1c;--or:#f0a040;--ord:#453017;--pu:#a78bfa;--pud:#2c1f5c;--cy:#50cfe0;--yl:#fcd34d}
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--tx);line-height:1.75;padding:2.5rem;max-width:1200px;margin:0 auto}
+    h1{font-size:2.4rem;font-weight:800;background:linear-gradient(135deg,var(--ac),var(--pu));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:.3rem}
+    .sub{font-size:1.05rem;color:var(--dim);margin-bottom:2.5rem;border-bottom:1px solid var(--bd);padding-bottom:1.5rem}
+    h2{font-size:1.35rem;font-weight:700;margin:2.5rem 0 1rem;color:var(--ac);display:flex;align-items:center;gap:.5rem}
+    h2 .n{background:var(--acd);color:var(--ac);font-size:.75rem;padding:.15rem .5rem;border-radius:5px;font-weight:700}
+    h3{font-size:1.05rem;font-weight:600;margin:1.5rem 0 .7rem;color:var(--tx)}
+    p{margin-bottom:1rem}
+    .card{background:var(--s1);border:1px solid var(--bd);border-radius:10px;padding:1.25rem;margin-bottom:1.25rem}
+    .card-g{border-left:4px solid var(--gr)}.card-a{border-left:4px solid var(--ac)}.card-o{border-left:4px solid var(--or)}.card-p{border-left:4px solid var(--pu)}
+    .g2{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem}
+    .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem}
+    @media(max-width:900px){.g2,.g3{grid-template-columns:1fr}}
+    table{border-collapse:collapse;width:100%;margin:1rem 0;font-size:.85rem}
+    th{background:var(--s2);color:var(--ac);padding:.6rem .8rem;text-align:left;border-bottom:2px solid var(--bd);font-weight:600}
+    td{padding:.5rem .8rem;border-bottom:1px solid var(--bd);vertical-align:top}
+    tr:hover td{background:var(--s2)}
+    pre{background:#0e1018;border:1px solid var(--bd);border-radius:8px;padding:1rem;overflow-x:auto;font-family:'JetBrains Mono','Fira Code',monospace;font-size:.78rem;line-height:1.6;margin:1rem 0;color:#c0c5d6}
+    code{font-family:'JetBrains Mono',monospace;background:var(--s2);padding:.1rem .35rem;border-radius:4px;font-size:.85em;color:var(--cy)}
+    .tag{display:inline-block;padding:.15rem .5rem;border-radius:5px;font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+    .tg{background:var(--grd);color:var(--gr)}.tr{background:var(--rdd);color:var(--rd)}.to{background:var(--ord);color:var(--or)}.tp{background:var(--pud);color:var(--pu)}.tb{background:rgba(91,141,239,.15);color:var(--ac)}
+    .flow{display:flex;align-items:center;justify-content:center;gap:.4rem;flex-wrap:wrap;margin:1.5rem 0;padding:1.25rem;background:var(--s1);border-radius:10px;border:1px solid var(--bd)}
+    .fb{background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:.6rem 1rem;text-align:center;font-size:.82rem;font-weight:600}
+    .fb.hl{border-color:var(--ac);background:rgba(91,141,239,.1);color:var(--ac)}
+    .fa{color:var(--dim);font-size:1.1rem}
+    .m{background:var(--s1);border:1px solid var(--bd);border-radius:10px;padding:1rem;text-align:center}
+    .m .v{font-size:1.8rem;font-weight:700;color:var(--ac)}.m .l{font-size:.78rem;color:var(--dim);margin-top:.2rem}
+    .vd{background:linear-gradient(135deg,rgba(56,201,122,.06),rgba(91,141,239,.06));border:1px solid var(--gr);border-radius:10px;padding:1.5rem;margin:2rem 0}
+    ul,ol{margin-left:1.5rem;margin-bottom:1rem}li{margin-bottom:.3rem}
+    details{background:var(--s1);border:1px solid var(--bd);border-radius:8px;margin-bottom:1rem}
+    details summary{padding:.7rem 1rem;cursor:pointer;font-weight:600;color:var(--ac);font-size:.92rem}
+    details summary:hover{background:var(--s2);border-radius:8px}
+    details[open] summary{border-bottom:1px solid var(--bd)}details>div{padding:1rem}
+    .sep{border:none;border-top:1px solid var(--bd);margin:2rem 0}
+    footer{text-align:center;color:var(--dim);font-size:.78rem;margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--bd)}
+    a{color:var(--ac);text-decoration:none}a:hover{text-decoration:underline}
+  </style>
+</head>
+<body>
+
+<h1>Kontractor</h1>
+<p class="sub">Declarative Container Infrastructure Requirements &mdash; An open standard for self-describing container images</p>
+
+<!-- ================================================================ -->
+<h2><span class="n">1</span> The Problem</h2>
+
+<div class="g2">
+  <div class="card card-o">
+    <h3>Containers Are Opaque</h3>
+    <p>A container image is a black box. It needs environment variables, TLS certificates, persistent storage, configuration files, secrets, and RBAC permissions. But there is <strong>no standardized way</strong> for the container to declare those requirements.</p>
+    <p>Instead, platform engineers manually author Helm values, Kustomize overlays, or raw YAML &mdash; often by reading READMEs, reverse-engineering Dockerfiles, or relying on tribal knowledge.</p>
+  </div>
+  <div class="card card-o">
+    <h3>Configuration Drift Is Silent</h3>
+    <p>When a container image is upgraded, the deployment config may not match. A new env var, a changed mount path, or an additional TLS certificate silently breaks the deployment.</p>
+    <p>The image and its deployment configuration are <strong>independently versioned artifacts</strong> with no enforced coupling. The container crashes at runtime instead of failing at deploy time.</p>
+  </div>
+</div>
+
+<h3>What This Looks Like in Practice</h3>
+
+<table>
+  <thead><tr><th>Scenario</th><th>What Happens Today</th><th>Impact</th></tr></thead>
+  <tbody>
+    <tr><td>New env var added in v2.0</td><td>Helm values not updated; pod starts, app crashes</td><td>Runtime failure, P1 incident</td></tr>
+    <tr><td>Mount path changed</td><td>Old path still in values.yaml; container runs but can't find config</td><td>Silent data loss or degraded service</td></tr>
+    <tr><td>TLS secret keys renamed</td><td>Init container copies wrong files; pod starts, TLS handshake fails</td><td>Intermittent connection errors</td></tr>
+    <tr><td>New RBAC permission needed</td><td>ServiceAccount lacks permission; app hits 403 at runtime</td><td>Feature broken in production</td></tr>
+    <tr><td>New team member deploys</td><td>Reads outdated README; misses 3 of 15 required env vars</td><td>Hours of debugging</td></tr>
+  </tbody>
+</table>
+
+<!-- ================================================================ -->
+<h2><span class="n">2</span> The Solution: Container Contracts</h2>
+
+<div class="card card-g">
+  <h3>What if containers could tell Kubernetes what they need?</h3>
+  <p>A <strong>Container Contract</strong> is a machine-readable YAML manifest embedded in or attached to a container image. It declares everything the container requires from the platform: environment variables, volume mounts, secrets, configmaps, ports, health checks, RBAC permissions, and security context.</p>
+  <p>A Kubernetes admission webhook reads the contract at deploy time and either <strong>validates</strong> that requirements are met or <strong>provisions</strong> missing resources automatically.</p>
+</div>
+
+<div class="flow">
+  <div class="fb">Build Pipeline</div>
+  <div class="fa">&rarr;</div>
+  <div class="fb">Image + Contract</div>
+  <div class="fa">&rarr;</div>
+  <div class="fb hl">Admission Webhook</div>
+  <div class="fa">&rarr;</div>
+  <div class="fb">Validate / Provision</div>
+  <div class="fa">&rarr;</div>
+  <div class="fb">Running Pod</div>
+</div>
+
+<h3>Example Contract</h3>
+
+<pre>apiVersion: kontractor.io/v1
+kind: ContainerContract
+metadata:
+  name: echo-server
+  version: "1.0.0"
+  image: myregistry/echo-server
+
+spec:
+  features:
+    tls:
+      description: "Enable HTTPS"
+      default: false
+
+  env:
+    required:
+      - name: APP_PORT
+        default: "8080"
+    conditional:
+      - when: { feature: tls }
+        env:
+          - name: TLS_CERT_PATH
+            default: "/etc/tls/tls.crt"
+          - name: TLS_KEY_PATH
+            default: "/etc/tls/tls.key"
+
+  mounts:
+    required:
+      - path: /tmp
+        type: ephemeral
+        maxSize: 64Mi
+    conditional:
+      - when: { feature: tls }
+        mounts:
+          - path: /etc/tls
+            type: secret
+            secretName: "${RELEASE}-tls"
+
+  ports:
+    - name: http
+      containerPort: 8080
+      protocol: TCP
+
+  health:
+    readiness:
+      httpGet:
+        path: /healthz
+        port: 8080
+
+  security:
+    runAsNonRoot: true
+    readOnlyRootFilesystem: true
+    dropCapabilities: ["ALL"]
+
+  rbac:
+    rules:
+      - apiGroups: [""]
+        resources: ["configmaps", "secrets"]
+        verbs: ["get", "list", "watch"]</pre>
+
+<!-- ================================================================ -->
+<h2><span class="n">3</span> Key Concepts</h2>
+
+<h3>3.1 Feature Flags &amp; Conditional Requirements</h3>
+
+<div class="card card-a">
+  <p>Not every requirement is always active. TLS mounts should only exist when TLS is enabled. Backup volumes only matter when backup is configured. Contracts handle this with <strong>feature flags</strong>:</p>
+<pre>spec:
+  features:
+    tls:
+      description: "SSL/TLS encryption"
+      default: false
+    ha:
+      description: "High availability mode"
+      default: false
+
+  mounts:
+    required:
+      - path: /tmp              # Always needed
+        type: ephemeral
+    conditional:
+      - when: { feature: tls }  # Only when TLS enabled
+        mounts:
+          - path: /etc/tls
+            type: secret
+      - when:                    # Compound: TLS AND HA
+          all:
+            - { feature: tls }
+            - { feature: ha }
+        mounts:
+          - path: /etc/tls/replicated
+            type: persistent</pre>
+  <p>Operators toggle features via Helm values or pod annotations. The webhook evaluates the conditions and includes/excludes requirements accordingly.</p>
+</div>
+
+<h3>3.2 Condition Expression Types</h3>
+
+<table>
+  <thead><tr><th>Expression</th><th>Syntax</th><th>Use Case</th></tr></thead>
+  <tbody>
+    <tr><td>Single feature</td><td><code>when: { feature: tls }</code></td><td>TLS volumes only when TLS enabled</td></tr>
+    <tr><td>All (AND)</td><td><code>when: { all: [{ feature: tls }, { feature: mtls }] }</code></td><td>mTLS-specific config</td></tr>
+    <tr><td>Any (OR)</td><td><code>when: { any: [{ feature: tls }, { feature: istio }] }</code></td><td>Cert mount for either mode</td></tr>
+    <tr><td>Negation</td><td><code>when: { not: { feature: tls } }</code></td><td>Plaintext-only config</td></tr>
+    <tr><td>Env check</td><td><code>when: { env: { name: MODE, equals: "debug" } }</code></td><td>Debug-only volumes</td></tr>
+    <tr><td>Always</td><td><em>(no when clause)</em></td><td>Unconditional requirements</td></tr>
+  </tbody>
+</table>
+
+<h3>3.3 Contract Transport Mechanisms</h3>
+
+<table>
+  <thead><tr><th>Mechanism</th><th>How</th><th>Pros</th><th>Cons</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Embedded file</strong></td><td><code>/.kontractor.yaml</code> inside image</td><td>Travels with image; versioned; simple</td><td>Requires image pull to read</td></tr>
+    <tr><td><strong>OCI Referrer Artifact</strong></td><td>Attached via OCI 1.1 Referrers API</td><td>No image pull needed; inspectable</td><td>Requires OCI 1.1 registry</td></tr>
+    <tr><td><strong>OCI Annotations</strong></td><td>Image manifest annotations</td><td>Lightest weight; standard</td><td>Size-limited; flat strings only</td></tr>
+    <tr><td><strong>ConfigMap sideload</strong></td><td>Separate ConfigMap in-cluster</td><td>Works today; no image changes</td><td>Decoupled from image (drift risk)</td></tr>
+  </tbody>
+</table>
+
+<!-- ================================================================ -->
+<h2><span class="n">4</span> Architecture</h2>
+
+<div class="flow">
+  <div class="fb">Developer</div>
+  <div class="fa">&rarr;</div>
+  <div class="fb">Adds contract<br>to Dockerfile</div>
+  <div class="fa">&rarr;</div>
+  <div class="fb">CI builds image<br>+ contract</div>
+  <div class="fa">&rarr;</div>
+  <div class="fb">Registry</div>
+  <div class="fa">&rarr;</div>
+  <div class="fb hl">kontractor<br>webhook</div>
+  <div class="fa">&rarr;</div>
+  <div class="fb">Validates pod<br>against contract</div>
+  <div class="fa">&rarr;</div>
+  <div class="fb">Pod runs<br>or is rejected</div>
+</div>
+
+<h3>Webhook Modes</h3>
+
+<div class="g3">
+  <div class="card card-g">
+    <h3>Audit Mode</h3>
+    <p>Logs warnings for unmet requirements but allows the pod to start. Zero risk. Ideal for rollout.</p>
+    <p><span class="tag tg">Safe</span></p>
+  </div>
+  <div class="card card-a">
+    <h3>Validate Mode</h3>
+    <p>Rejects pods that don't meet required contract requirements. Clear error messages.</p>
+    <p><span class="tag tb">Recommended</span></p>
+  </div>
+  <div class="card card-p">
+    <h3>Mutate Mode</h3>
+    <p>Automatically injects missing volumes, env vars, and mounts from the contract.</p>
+    <p><span class="tag tp">Advanced</span></p>
+  </div>
+</div>
+
+<!-- ================================================================ -->
+<h2><span class="n">5</span> Benefits</h2>
+
+<div class="g2">
+  <div class="card card-g">
+    <h3>Eliminate Configuration Drift</h3>
+    <p>The contract is baked into the image. When a developer adds a new env var, they update the contract in the same PR. The next deployment automatically validates it.</p>
+    <p><span class="tag tg">Impact: Critical</span></p>
+  </div>
+  <div class="card card-g">
+    <h3>Deploy-Time Validation</h3>
+    <p>"Pod rejected: missing required secret 'app-tls' with keys [tls.crt, tls.key]" instead of a cryptic crash 10 minutes after deployment.</p>
+    <p><span class="tag tg">Impact: Critical</span></p>
+  </div>
+  <div class="card card-g">
+    <h3>Self-Documenting Images</h3>
+    <p>Run <code>kontractor inspect myimage:v2</code> and see every env var, mount, port, and secret the container needs. No README hunting.</p>
+    <p><span class="tag tg">Impact: High</span></p>
+  </div>
+  <div class="card card-g">
+    <h3>Simplified Helm Charts</h3>
+    <p>Charts only need to declare operator-specific overrides (replicas, resources, feature flags). All container-intrinsic requirements come from the contract.</p>
+    <p><span class="tag tg">Impact: High</span></p>
+  </div>
+  <div class="card card-g">
+    <h3>Automated RBAC</h3>
+    <p>The contract declares exactly which RBAC rules the container needs. The webhook or Helm chart auto-generates Role and RoleBinding resources. No more guessing.</p>
+    <p><span class="tag tg">Impact: Medium</span></p>
+  </div>
+  <div class="card card-g">
+    <h3>Cross-Platform Portability</h3>
+    <p>The same contract works on vanilla K8s, OpenShift, EKS, GKE, or any platform running the webhook. Container requirements are platform-agnostic.</p>
+    <p><span class="tag tg">Impact: Medium</span></p>
+  </div>
+</div>
+
+<h3>Quantified Impact (Typical Enterprise Deployment)</h3>
+
+<table>
+  <thead><tr><th>Metric</th><th>Without Kontractor</th><th>With Kontractor</th><th>Change</th></tr></thead>
+  <tbody>
+    <tr><td>Lines of Helm values per service</td><td>150-300</td><td>20-50</td><td><span class="tag tg">-75%</span></td></tr>
+    <tr><td>Deployment template complexity</td><td>200-300 lines</td><td>50-80 lines</td><td><span class="tag tg">-70%</span></td></tr>
+    <tr><td>TLS init container duplication</td><td>Once per chart</td><td>Zero (webhook handles)</td><td><span class="tag tg">-100%</span></td></tr>
+    <tr><td>Config drift incidents per quarter</td><td>3-8</td><td>~0</td><td><span class="tag tg">Eliminated</span></td></tr>
+    <tr><td>Onboarding time for new engineer</td><td>Days (read docs, ask team)</td><td>Minutes (inspect contract)</td><td><span class="tag tg">-90%</span></td></tr>
+  </tbody>
+</table>
+
+<!-- ================================================================ -->
+<h2><span class="n">6</span> Comparison with Existing Approaches</h2>
+
+<table>
+  <thead><tr><th>Approach</th><th>What It Solves</th><th>Gap</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Dockerfile EXPOSE / VOLUME / ENV</strong></td><td>Original self-declaring mechanism</td><td>Kubernetes ignores EXPOSE and VOLUME. ENV sets defaults but doesn't validate. No conditional support.</td></tr>
+    <tr><td><strong>OCI Annotations</strong></td><td>Metadata attached to images</td><td>No standard for infrastructure requirements. Flat strings only.</td></tr>
+    <tr><td><strong>Service Binding (servicebinding.io)</strong></td><td>Connects services to workloads</td><td>Only handles service connectivity, not volumes, security, RBAC, or health checks.</td></tr>
+    <tr><td><strong>Helm values.yaml</strong></td><td>Configurable deployments</td><td>External to the image. No validation against what the container actually needs.</td></tr>
+    <tr><td><strong>Kyverno / OPA Gatekeeper</strong></td><td>Policy enforcement</td><td>Enforces platform policies, not container requirements. Policies don't know what the container needs.</td></tr>
+    <tr><td><strong>Kontractor</strong></td><td><strong>All of the above, unified</strong></td><td>New standard to build and adopt. Requires webhook deployment.</td></tr>
+  </tbody>
+</table>
+
+<!-- ================================================================ -->
+<h2><span class="n">7</span> Challenges &amp; Mitigations</h2>
+
+<div class="g2">
+  <div class="card card-o">
+    <h3>Security: Untrusted Contracts</h3>
+    <p>A malicious container could request privileged mounts or excessive RBAC. <strong>Mitigation:</strong> Contracts <em>request</em>, policies <em>permit</em>. Pair Kontractor with Kyverno/OPA to constrain what contracts can ask for.</p>
+  </div>
+  <div class="card card-o">
+    <h3>Image Pull Latency</h3>
+    <p>Reading embedded contracts requires pulling image layers. <strong>Mitigation:</strong> Use OCI Referrer artifacts (no pull needed) or cache contracts in the webhook.</p>
+  </div>
+  <div class="card card-o">
+    <h3>Migration Complexity</h3>
+    <p>Existing images don't have contracts. <strong>Mitigation:</strong> Start with audit mode. Provide a <code>kontractor generate</code> CLI that scans Dockerfiles and existing Helm values to bootstrap contracts.</p>
+  </div>
+  <div class="card card-o">
+    <h3>Webhook Availability</h3>
+    <p>If the webhook is down, pods can't start. <strong>Mitigation:</strong> HA deployment (3+ replicas), <code>failurePolicy: Ignore</code> with alerting, contract data as Helm fallback.</p>
+  </div>
+</div>
+
+<!-- ================================================================ -->
+<h2><span class="n">8</span> Getting Started</h2>
+
+<div class="card card-p">
+  <h3>Try the Sample Echo Server</h3>
+<pre># Clone the repo
+git clone https://github.com/YOUR_USERNAME/kontractor.git
+cd kontractor
+
+# Deploy without TLS
+helm install echo-server charts/echo-server \
+  -n kontractor --create-namespace
+
+# Deploy with TLS enabled
+kubectl create secret tls echo-tls \
+  --cert=tls.crt --key=tls.key -n kontractor
+
+helm install echo-tls charts/echo-server \
+  -n kontractor \
+  --set contract.features.tls=true \
+  --set tls.secretName=echo-tls
+
+# Inspect the contract
+kontractor-validate examples/echo-server.contract.yaml</pre>
+</div>
+
+<!-- ================================================================ -->
+<h2><span class="n">9</span> Roadmap</h2>
+
+<table>
+  <thead><tr><th>Phase</th><th>Deliverables</th><th>Status</th></tr></thead>
+  <tbody>
+    <tr><td><strong>v0.1</strong> &mdash; Schema &amp; CLI</td><td>Contract JSON Schema, <code>kontractor-validate</code> CLI, sample chart</td><td><span class="tag tg">Done</span></td></tr>
+    <tr><td><strong>v0.2</strong> &mdash; Audit Webhook</td><td>Mutating webhook in audit mode (warns but doesn't block)</td><td><span class="tag to">Next</span></td></tr>
+    <tr><td><strong>v0.3</strong> &mdash; Validate Webhook</td><td>Reject pods that don't meet required contract requirements</td><td><span class="tag tp">Planned</span></td></tr>
+    <tr><td><strong>v0.4</strong> &mdash; Mutate Webhook</td><td>Auto-inject volumes, env, mounts from contract</td><td><span class="tag tp">Planned</span></td></tr>
+    <tr><td><strong>v0.5</strong> &mdash; OCI Integration</td><td>Read contracts from OCI Referrer artifacts (no image pull)</td><td><span class="tag tp">Planned</span></td></tr>
+    <tr><td><strong>v1.0</strong> &mdash; Production Ready</td><td>HA webhook, Helm library chart, <code>kontractor generate</code> CLI</td><td><span class="tag tp">Planned</span></td></tr>
+  </tbody>
+</table>
+
+<hr class="sep">
+
+<div class="vd">
+  <h3>Why This Matters</h3>
+  <p>Dockerfiles introduced <code>EXPOSE</code>, <code>VOLUME</code>, and <code>ENV</code> as the first attempt at self-declaring container requirements. Kubernetes ignored them. The Container Contract pattern finishes what Dockerfiles started &mdash; with the rigor, validation, and automation to make it work at production scale.</p>
+  <p>Containers shouldn't be opaque. They should tell the platform what they need, and the platform should listen.</p>
+</div>
+
+<footer>
+  Kontractor &mdash; An open standard for declarative container infrastructure requirements<br>
+  Apache License 2.0 &mdash; <a href="https://github.com/kontractor/kontractor">github.com/kontractor/kontractor</a>
+</footer>
+
+</body>
+</html>

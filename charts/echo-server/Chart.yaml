@@ -1,0 +1,15 @@
+apiVersion: v2
+name: echo-server
+description: >
+  A sample Helm chart demonstrating the Kontractor container contract pattern.
+  Deploys a simple HTTP echo server with optional TLS, namespace-scoped RBAC,
+  and contract-declared infrastructure requirements.
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+home: https://github.com/kontractor/kontractor
+keywords:
+  - kontractor
+  - echo-server
+  - contract
+  - declarative-containers
