@@ -1,0 +1,11 @@
+name: "kontractor"
+version: "0.2.0"
+usage: "Mutate Helm chart manifests using Kontractor container contracts"
+description: |-
+  A Helm post-renderer plugin that reads container contracts and
+  automatically injects required environment variables, volumes,
+  and volume mounts into workload resources.
+command: "$HELM_PLUGIN_DIR/bin/kontractor-post-render"
+hooks:
+  install: "cd $HELM_PLUGIN_DIR && make build"
+  update: "cd $HELM_PLUGIN_DIR && make build"

@@ -1,0 +1,6 @@
+apiVersion: v2
+name: echo-server-bare
+description: A bare-bones echo server chart with NO env/volumes - Kontractor injects them
+type: application
+version: 0.1.0
+appVersion: "latest"

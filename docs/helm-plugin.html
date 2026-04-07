@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kontractor Helm Plugin — Post-Renderer Architecture Report</title>
+<style>
+:root {
+  --primary: #2563eb;
+  --primary-dark: #1d4ed8;
+  --accent: #10b981;
+  --accent-orange: #f59e0b;
+  --bg: #f8fafc;
+  --surface: #ffffff;
+  --text: #1e293b;
+  --text-secondary: #64748b;
+  --border: #e2e8f0;
+  --code-bg: #1e293b;
+  --code-text: #e2e8f0;
+  --success: #22c55e;
+  --warning: #eab308;
+  --danger: #ef4444;
+  --info: #3b82f6;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.7;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+h1 { font-size: 2.2rem; font-weight: 800; margin-bottom: 0.5rem; color: var(--primary-dark); }
+h2 { font-size: 1.5rem; font-weight: 700; margin: 2.5rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 3px solid var(--primary); }
+h3 { font-size: 1.2rem; font-weight: 600; margin: 1.5rem 0 0.75rem; color: var(--text); }
+p { margin-bottom: 1rem; }
+.subtitle { color: var(--text-secondary); font-size: 1.1rem; margin-bottom: 2rem; }
+.date { color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 2rem; }
+a { color: var(--primary); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+
+.highlight-card {
+  border-left: 4px solid var(--primary);
+  background: #eff6ff;
+}
+.highlight-card.green { border-left-color: var(--accent); background: #f0fdf4; }
+.highlight-card.orange { border-left-color: var(--accent-orange); background: #fffbeb; }
+
+.badge {
+  display: inline-block;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.badge-blue { background: #dbeafe; color: #1d4ed8; }
+.badge-green { background: #dcfce7; color: #166534; }
+.badge-orange { background: #fef3c7; color: #92400e; }
+.badge-red { background: #fee2e2; color: #991b1b; }
+
+pre {
+  background: var(--code-bg);
+  color: var(--code-text);
+  padding: 1.25rem;
+  border-radius: 10px;
+  overflow-x: auto;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  margin: 1rem 0;
+}
+code {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.88em;
+  background: #f1f5f9;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+}
+pre code { background: none; padding: 0; font-size: inherit; }
+
+.comment { color: #6b7280; }
+.keyword { color: #93c5fd; }
+.string { color: #86efac; }
+.added { color: #4ade80; font-weight: 600; }
+.removed { color: #f87171; text-decoration: line-through; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0 1.5rem;
+  font-size: 0.9rem;
+}
+th {
+  background: var(--primary);
+  color: white;
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-weight: 600;
+}
+td {
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+tr:hover td { background: #f8fafc; }
+tr:nth-child(even) td { background: #fafafa; }
+
+.diagram {
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  padding: 2rem;
+  margin: 1.5rem 0;
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+  line-height: 1.8;
+  overflow-x: auto;
+}
+
+.flow-box {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  margin: 0.25rem;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+.flow-blue { background: #dbeafe; color: #1e40af; border: 1px solid #93c5fd; }
+.flow-green { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+.flow-orange { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
+.flow-red { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+.flow-gray { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+.flow-arrow { font-size: 1.2rem; color: var(--text-secondary); margin: 0 0.5rem; }
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+@media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+
+.compare-header { font-weight: 700; font-size: 1rem; margin-bottom: 0.5rem; }
+.vs { text-align: center; font-size: 2rem; font-weight: 800; color: var(--text-secondary); padding: 1rem; }
+
+details { margin: 0.5rem 0; }
+details summary { cursor: pointer; font-weight: 600; padding: 0.5rem 0; color: var(--primary); }
+details summary:hover { color: var(--primary-dark); }
+
+.toc { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem 2rem; margin: 1.5rem 0; }
+.toc h3 { margin-top: 0; }
+.toc ol { padding-left: 1.5rem; }
+.toc li { margin: 0.4rem 0; }
+
+.metric { text-align: center; padding: 1rem; }
+.metric-value { font-size: 2.5rem; font-weight: 800; color: var(--primary); }
+.metric-label { font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.25rem; }
+</style>
+</head>
+<body>
+
+<h1>Kontractor Helm Plugin</h1>
+<p class="subtitle">Post-Renderer Architecture: Mutate Any Chart Without Modifying It</p>
+<p class="date">Report generated: April 7, 2026</p>
+
+<div class="toc">
+<h3>Contents</h3>
+<ol>
+<li><a href="#problem">The Problem: Why Not Webhooks?</a></li>
+<li><a href="#approach">The Post-Renderer Approach</a></li>
+<li><a href="#architecture">Architecture Deep Dive</a></li>
+<li><a href="#flow">Data Flow</a></li>
+<li><a href="#components">Component Breakdown</a></li>
+<li><a href="#demo">Live Demonstration</a></li>
+<li><a href="#comparison">Before vs After Comparison</a></li>
+<li><a href="#conditional">Conditional Feature System</a></li>
+<li><a href="#integration">Integration Methods</a></li>
+<li><a href="#vs-webhook">Post-Renderer vs Webhook</a></li>
+<li><a href="#roadmap">Roadmap</a></li>
+</ol>
+</div>
+
+<h2 id="problem">1. The Problem: Why Not Webhooks?</h2>
+
+<div class="card highlight-card orange">
+<h3>Mutating Admission Webhooks Have Real Costs</h3>
+<p>A <strong>MutatingAdmissionWebhook</strong> is the Kubernetes-native way to modify resources before they're persisted. But deploying one means:</p>
+<ul style="margin-left: 1.5rem; margin-top: 0.75rem;">
+<li>Running a <strong>webhook server</strong> inside the cluster (Deployment + Service)</li>
+<li>Managing <strong>TLS certificates</strong> for the webhook endpoint</li>
+<li>Creating a <strong>MutatingWebhookConfiguration</strong> CRD</li>
+<li>Handling <strong>failure modes</strong> (if the webhook is down, pod creation blocks or bypasses)</li>
+<li>Cluster <strong>admin access</strong> to install the webhook</li>
+<li>Potential <strong>latency</strong> on every pod creation in the cluster</li>
+</ul>
+</div>
+
+<p>For a concept like Kontractor — where we want to inject infrastructure requirements from a contract into Helm-rendered manifests — a webhook is overkill for many use cases. The mutation can happen <strong>before</strong> the YAML ever reaches the cluster.</p>
+
+<h2 id="approach">2. The Post-Renderer Approach</h2>
+
+<div class="card highlight-card green">
+<h3>Helm's --post-renderer: The Sweet Spot</h3>
+<p>Helm natively supports <strong>post-renderers</strong> — external programs that receive rendered YAML on stdin and output modified YAML on stdout. This is a first-class Helm feature, not a hack.</p>
+</div>
+
+<div class="diagram">
+<span class="flow-box flow-blue">helm template / install</span>
+<span class="flow-arrow">→</span>
+<span class="flow-box flow-gray">Rendered YAML (stdin)</span>
+<span class="flow-arrow">→</span>
+<span class="flow-box flow-green">kontractor-post-render</span>
+<span class="flow-arrow">→</span>
+<span class="flow-box flow-orange">Mutated YAML (stdout)</span>
+<span class="flow-arrow">→</span>
+<span class="flow-box flow-blue">kubectl apply</span>
+</div>
+
+<p>The post-renderer:</p>
+<ol style="margin-left: 1.5rem;">
+<li>Reads the <strong>Container Contract</strong> from a specified file</li>
+<li>Evaluates <strong>feature flags</strong> (e.g., <code>--features=tls</code>)</li>
+<li>Resolves <strong>variable substitutions</strong> (e.g., <code>${RELEASE}</code> → actual release name)</li>
+<li>Parses all YAML documents from stdin</li>
+<li>For each <strong>workload</strong> (Deployment, StatefulSet, DaemonSet, Job, CronJob):</li>
+<ul style="margin-left: 1.5rem;">
+<li>Injects missing <strong>environment variables</strong></li>
+<li>Adds missing <strong>volumes</strong> to the pod spec</li>
+<li>Adds missing <strong>volume mounts</strong> to the main container</li>
+<li>Annotates the resource with contract metadata</li>
+</ul>
+<li>Outputs all resources (mutated + untouched) on stdout</li>
+</ol>
+
+<h2 id="architecture">3. Architecture Deep Dive</h2>
+
+<div class="diagram" style="text-align: left;">
+<pre style="background: transparent; border: none; margin: 0; padding: 0; font-size: 0.82rem;"><code>kontractor-helm-plugin/
+│
+├── cmd/kontractor-post-render/     <span class="comment">← CLI entry point</span>
+│   └── main.go                     <span class="comment">   Flag parsing, orchestration</span>
+│
+├── pkg/
+│   ├── contract/                   <span class="comment">← Contract domain model</span>
+│   │   ├── types.go                <span class="comment">   Go structs matching contract schema</span>
+│   │   ├── loader.go               <span class="comment">   YAML file → ContainerContract</span>
+│   │   └── substitute.go           <span class="comment">   ${VAR} → value resolution</span>
+│   │
+│   ├── parser/                     <span class="comment">← Kubernetes YAML handling</span>
+│   │   └── k8s.go                  <span class="comment">   Multi-doc YAML parse/serialize</span>
+│   │
+│   └── mutator/                    <span class="comment">← Core mutation engine</span>
+│       └── mutator.go              <span class="comment">   Env, volume, mount injection</span>
+│
+├── examples/
+│   ├── echo-server.contract.yaml   <span class="comment">← Sample contract</span>
+│   └── charts/echo-server-bare/    <span class="comment">← Intentionally bare chart</span>
+│
+├── kontractor-post-render.sh       <span class="comment">← Helm --post-renderer wrapper</span>
+├── plugin.yaml                     <span class="comment">← Helm plugin descriptor</span>
+├── Makefile                        <span class="comment">← Build system</span>
+└── test/demo.sh                    <span class="comment">← Full pipeline demo</span></code></pre>
+</div>
+
+<h2 id="flow">4. Data Flow</h2>
+
+<div class="diagram" style="text-align: left; line-height: 2;">
+<pre style="background: transparent; border: none; margin: 0; padding: 0; font-size: 0.82rem;"><code>┌──────────────────────────────────────────────────────────────────┐
+│                    kontractor-post-render                       │
+│                                                                  │
+│  ┌─────────┐    ┌──────────┐    ┌───────────┐    ┌───────────┐  │
+│  │ Contract │    │  Feature  │    │  Variable │    │  YAML     │  │
+│  │ Loader   │    │  Resolver │    │  Subst.   │    │  Parser   │  │
+│  │          │    │           │    │           │    │  (stdin)  │  │
+│  └────┬─────┘    └─────┬─────┘    └─────┬─────┘    └─────┬─────┘  │
+│       │                │                │                │        │
+│       ▼                ▼                ▼                ▼        │
+│  ┌────────────────────────────────────────────────────────────┐  │
+│  │                    MUTATION ENGINE                          │  │
+│  │                                                            │  │
+│  │  For each Deployment/StatefulSet/DaemonSet:                │  │
+│  │                                                            │  │
+│  │  1. Find podSpec → containers[0]                           │  │
+│  │  2. Resolve contract features against flags                │  │
+│  │  3. Collect required + conditional env vars                │  │
+│  │  4. Inject missing env vars into container                 │  │
+│  │  5. Collect required + conditional mounts                  │  │
+│  │  6. Create volumes on podSpec for each mount               │  │
+│  │  7. Create volumeMounts on container for each mount        │  │
+│  │  8. Add kontractor.io/* annotations                        │  │
+│  │                                                            │  │
+│  └────────────────────────────────────────────────────────────┘  │
+│       │                                                          │
+│       ▼                                                          │
+│  ┌──────────┐                                                    │
+│  │  YAML    │ → stdout (mutated manifests)                       │
+│  │ Serializer│                                                   │
+│  └──────────┘                                                    │
+│  ┌──────────┐                                                    │
+│  │  Report  │ → stderr (mutation summary)                        │
+│  │ Formatter│                                                    │
+│  └──────────┘                                                    │
+└──────────────────────────────────────────────────────────────────┘</code></pre>
+</div>
+
+<h2 id="components">5. Component Breakdown</h2>
+
+<h3>5a. Contract Loader (<code>pkg/contract/</code>)</h3>
+
+<div class="card">
+<p>The contract package defines Go structs that mirror the <code>kontractor.io/v1 ContainerContract</code> schema. Key types:</p>
+
+<table>
+<thead><tr><th>Type</th><th>Purpose</th></tr></thead>
+<tbody>
+<tr><td><code>ContainerContract</code></td><td>Root type: apiVersion, kind, metadata, spec</td></tr>
+<tr><td><code>Spec</code></td><td>Features, env, mounts, secrets, ports, health, security, rbac</td></tr>
+<tr><td><code>Feature</code></td><td>Named boolean flag with description and default value</td></tr>
+<tr><td><code>EnvSpec</code></td><td>Required + optional + conditional environment variables</td></tr>
+<tr><td><code>MountSpec</code></td><td>Required + optional + conditional volume mounts</td></tr>
+<tr><td><code>WhenClause</code></td><td>Feature-based conditional: <code>when: { feature: tls }</code></td></tr>
+</tbody>
+</table>
+
+<p>The loader validates <code>apiVersion</code> and <code>kind</code> on parse, failing early on invalid contracts.</p>
+<p>The <code>SubstituteVars</code> function performs <code>${RELEASE}</code>-style variable resolution across all string fields in the contract before mutation begins.</p>
+</div>
+
+<h3>5b. YAML Parser (<code>pkg/parser/</code>)</h3>
+
+<div class="card">
+<p>Uses <code>gopkg.in/yaml.v3</code>'s <strong>AST node</strong> representation rather than deserializing into typed structs. This preserves:</p>
+<ul style="margin-left: 1.5rem;">
+<li>Original YAML ordering and formatting</li>
+<li>Comments (where possible)</li>
+<li>Unknown fields the mutator doesn't care about</li>
+</ul>
+<p>Key functions:</p>
+<table>
+<thead><tr><th>Function</th><th>Purpose</th></tr></thead>
+<tbody>
+<tr><td><code>ParseManifests()</code></td><td>Splits multi-document YAML on <code>---</code>, parses each into <code>*yaml.Node</code></td></tr>
+<tr><td><code>GetField()</code></td><td>Traverses nested mapping nodes by path (e.g., <code>"spec", "template", "spec"</code>)</td></tr>
+<tr><td><code>GetStringField()</code></td><td>Shorthand for getting a scalar value by path</td></tr>
+<tr><td><code>SerializeManifests()</code></td><td>Re-serializes all nodes back to multi-document YAML</td></tr>
+<tr><td><code>IsWorkload()</code></td><td>Returns true for Deployment, StatefulSet, DaemonSet, Job, CronJob</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>5c. Mutation Engine (<code>pkg/mutator/</code>)</h3>
+
+<div class="card">
+<p>The core mutation logic. For each workload resource:</p>
+
+<pre><code><span class="comment">// Pseudocode</span>
+<span class="keyword">func</span> MutateWorkload(node, contract, features):
+    podSpec  = findPodSpec(node)           <span class="comment">// handles CronJob nesting</span>
+    container = podSpec.containers[0]
+
+    <span class="keyword">for</span> env <span class="keyword">in</span> contract.ResolvedEnv(features):
+        <span class="keyword">if</span> !hasEnvVar(container, env.Name):
+            addEnvVar(container, env)       <span class="comment">// value or secretKeyRef</span>
+
+    <span class="keyword">for</span> mount <span class="keyword">in</span> contract.ResolvedMounts(features):
+        volName = volumeNameFromPath(mount.Path)
+        <span class="keyword">if</span> !hasVolume(podSpec, volName):
+            addVolume(podSpec, mount)       <span class="comment">// secret/configMap/emptyDir</span>
+        <span class="keyword">if</span> !hasVolumeMount(container, mount.Path):
+            addVolumeMount(container, mount)
+
+    addContractAnnotation(node, contract, features)</code></pre>
+
+<p><strong>Idempotency</strong>: The mutator checks for existing env vars (by name), volumes (by name), and mounts (by mountPath) before injecting. Running the post-renderer twice produces identical output.</p>
+
+<p><strong>Volume types supported</strong>:</p>
+<table>
+<thead><tr><th>Contract Type</th><th>Kubernetes Volume Type</th><th>Config From</th></tr></thead>
+<tbody>
+<tr><td><code>secret</code></td><td><code>secret.secretName</code></td><td><code>secretName</code> field</td></tr>
+<tr><td><code>configmap</code></td><td><code>configMap.name</code></td><td><code>configMapName</code> field</td></tr>
+<tr><td><code>ephemeral</code> / <code>emptyDir</code></td><td><code>emptyDir.sizeLimit</code></td><td><code>maxSize</code> field</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="demo">6. Live Demonstration</h2>
+
+<h3>The Bare Chart (Input)</h3>
+<p>A deliberately minimal Deployment — no env vars, no volumes, no mounts:</p>
+
+<pre><code><span class="keyword">apiVersion</span>: apps/v1
+<span class="keyword">kind</span>: Deployment
+<span class="keyword">metadata</span>:
+  <span class="keyword">name</span>: kontractor-demo-echo-server
+<span class="keyword">spec</span>:
+  <span class="keyword">template</span>:
+    <span class="keyword">spec</span>:
+      <span class="keyword">containers</span>:
+        - <span class="keyword">name</span>: echo-server
+          <span class="keyword">image</span>: <span class="string">"hashicorp/http-echo:latest"</span>
+          <span class="keyword">args</span>: [<span class="string">"-listen=:8080"</span>, <span class="string">"-text=hello-bare"</span>]
+          <span class="keyword">ports</span>:
+            - <span class="keyword">containerPort</span>: 8080
+<span class="comment">          # No env, no volumes, no mounts</span></code></pre>
+
+<h3>After Mutation (No TLS)</h3>
+<p>With <code>--contract=echo-server.contract.yaml</code> and <strong>no feature flags</strong>:</p>
+
+<pre><code><span class="keyword">spec</span>:
+  <span class="keyword">template</span>:
+    <span class="keyword">spec</span>:
+      <span class="keyword">containers</span>:
+        - <span class="keyword">name</span>: echo-server
+          <span class="keyword">image</span>: <span class="string">"hashicorp/http-echo:latest"</span>
+          <span class="keyword">args</span>: [<span class="string">"-listen=:8080"</span>, <span class="string">"-text=hello-bare"</span>]
+          <span class="keyword">ports</span>:
+            - <span class="keyword">containerPort</span>: 8080
+<span class="added">          env:
+            - name: ECHO_TEXT
+              value: Hello from Kontractor!
+            - name: ECHO_PORT
+              value: "8080"
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp</span>
+<span class="added">      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi</span></code></pre>
+
+<div class="card highlight-card green">
+<strong>Injected</strong>: 2 env vars (<code>ECHO_TEXT</code>, <code>ECHO_PORT</code>), 1 volume (<code>tmp</code>), 1 mount (<code>/tmp</code>)
+</div>
+
+<h3>After Mutation (TLS Enabled)</h3>
+<p>With <code>--features=tls --set-vars=RELEASE=kontractor-demo</code>:</p>
+
+<pre><code><span class="keyword">spec</span>:
+  <span class="keyword">template</span>:
+    <span class="keyword">spec</span>:
+      <span class="keyword">containers</span>:
+        - <span class="keyword">name</span>: echo-server
+          <span class="keyword">image</span>: <span class="string">"hashicorp/http-echo:latest"</span>
+          <span class="keyword">args</span>: [<span class="string">"-listen=:8080"</span>, <span class="string">"-text=hello-bare"</span>]
+          <span class="keyword">ports</span>:
+            - <span class="keyword">containerPort</span>: 8080
+<span class="added">          env:
+            - name: ECHO_TEXT
+              value: Hello from Kontractor!
+            - name: ECHO_PORT
+              value: "8080"
+            - name: TLS_ENABLED
+              value: "true"
+            - name: TLS_CERT_PATH
+              value: /etc/tls/tls.crt
+            - name: TLS_KEY_PATH
+              value: /etc/tls/tls.key
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: etc-tls
+              mountPath: /etc/tls
+              readOnly: true</span>
+<span class="added">      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi
+        - name: etc-tls
+          secret:
+            secretName: kontractor-demo-tls</span></code></pre>
+
+<div class="card highlight-card green">
+<strong>Additional TLS injections</strong>: 3 env vars (<code>TLS_ENABLED</code>, <code>TLS_CERT_PATH</code>, <code>TLS_KEY_PATH</code>), 1 secret volume (<code>etc-tls</code>), 1 readonly mount (<code>/etc/tls</code>). The <code>${RELEASE}</code> in the contract was resolved to <code>kontractor-demo</code>.
+</div>
+
+<h2 id="comparison">7. Before vs After Comparison</h2>
+
+<div class="grid-2">
+<div class="card" style="border-top: 4px solid var(--danger);">
+<div class="compare-header">BEFORE (Bare Chart)</div>
+<ul style="margin-left: 1rem; font-size: 0.9rem;">
+<li>0 environment variables</li>
+<li>0 volumes</li>
+<li>0 volume mounts</li>
+<li>0 annotations</li>
+<li>Chart knows nothing about app needs</li>
+</ul>
+</div>
+<div class="card" style="border-top: 4px solid var(--success);">
+<div class="compare-header">AFTER (Post-Rendered with TLS)</div>
+<ul style="margin-left: 1rem; font-size: 0.9rem;">
+<li>5 environment variables injected</li>
+<li>2 volumes created (emptyDir + secret)</li>
+<li>2 volume mounts attached</li>
+<li>3 Kontractor annotations added</li>
+<li>All from a declarative contract</li>
+</ul>
+</div>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin: 1rem 0;">
+<div class="card metric">
+<div class="metric-value">5</div>
+<div class="metric-label">Env Vars Injected</div>
+</div>
+<div class="card metric">
+<div class="metric-value">2</div>
+<div class="metric-label">Volumes Created</div>
+</div>
+<div class="card metric">
+<div class="metric-value">2</div>
+<div class="metric-label">Mounts Attached</div>
+</div>
+<div class="card metric">
+<div class="metric-value">0</div>
+<div class="metric-label">Chart Lines Changed</div>
+</div>
+</div>
+
+<h2 id="conditional">8. Conditional Feature System</h2>
+
+<div class="card">
+<h3>How Features Work</h3>
+<p>The contract defines a <code>features</code> map with named boolean flags. Each flag has a description and a default value:</p>
+
+<pre><code><span class="keyword">spec</span>:
+  <span class="keyword">features</span>:
+    <span class="keyword">tls</span>:
+      <span class="keyword">description</span>: <span class="string">"Enable HTTPS with TLS certificates"</span>
+      <span class="keyword">default</span>: false</code></pre>
+
+<p>Requirements can then be made conditional using <code>when</code> clauses:</p>
+
+<pre><code><span class="keyword">env</span>:
+  <span class="keyword">required</span>:            <span class="comment"># Always injected</span>
+    - <span class="keyword">name</span>: ECHO_TEXT
+      <span class="keyword">default</span>: <span class="string">"Hello!"</span>
+  <span class="keyword">conditional</span>:          <span class="comment"># Only when feature is enabled</span>
+    - <span class="keyword">when</span>: { <span class="keyword">feature</span>: tls }
+      <span class="keyword">env</span>:
+        - <span class="keyword">name</span>: TLS_ENABLED
+          <span class="keyword">value</span>: <span class="string">"true"</span></code></pre>
+</div>
+
+<div class="diagram" style="text-align: left;">
+<pre style="background: transparent; border: none; margin: 0; padding: 0;"><code>Feature Resolution Flow:
+
+  CLI flags: --features=tls        Contract defaults:
+  Env var: KONTRACTOR_FEATURES       tls: false
+       │                               │
+       ▼                               ▼
+  ┌────────────────────────────────────────┐
+  │         Feature Resolver               │
+  │                                        │
+  │  For each feature in contract:         │
+  │    if flag provided → use flag value   │
+  │    else → use contract default         │
+  │                                        │
+  │  Result: { tls: true }                 │
+  └───────────────┬────────────────────────┘
+                  │
+     ┌────────────┴────────────┐
+     ▼                         ▼
+  ┌─────────┐           ┌──────────────┐
+  │ Required│           │ Conditional  │
+  │ always  │           │ when: tls    │
+  │ inject  │           │ → inject     │
+  └─────────┘           └──────────────┘</code></pre>
+</div>
+
+<h2 id="integration">9. Integration Methods</h2>
+
+<div class="card">
+<h3>Method 1: Direct Pipeline</h3>
+<p>Render with <code>helm template</code>, pipe through the binary, apply with <code>kubectl</code>:</p>
+<pre><code>helm template myrelease ./mychart | \
+  ./bin/kontractor-post-render \
+    --contract=contract.yaml \
+    --features=tls \
+    --set-vars=RELEASE=myrelease | \
+  kubectl apply -f -</code></pre>
+</div>
+
+<div class="card">
+<h3>Method 2: Helm --post-renderer Flag</h3>
+<p>Use the wrapper script with Helm's native post-renderer support:</p>
+<pre><code>export KONTRACTOR_CONTRACT=contract.yaml
+export KONTRACTOR_FEATURES=tls
+
+helm install myrelease ./mychart \
+  --post-renderer ./kontractor-post-render.sh</code></pre>
+<p>This works with <code>helm install</code>, <code>helm upgrade</code>, and <code>helm template</code>.</p>
+</div>
+
+<div class="card">
+<h3>Method 3: Helm Plugin</h3>
+<p>Install as a Helm plugin for global availability:</p>
+<pre><code>helm plugin install ./kontractor-helm-plugin
+
+<span class="comment"># Then use anywhere</span>
+helm kontractor install myrelease ./mychart \
+  --contract=contract.yaml --features=tls</code></pre>
+</div>
+
+<div class="card">
+<h3>Method 4: CI/CD Pipeline</h3>
+<p>Integrate into GitOps workflows:</p>
+<pre><code><span class="comment"># In a CI pipeline (GitHub Actions, GitLab CI, etc.)</span>
+helm template myrelease ./mychart \
+  | kontractor-post-render \
+      --contract=contract.yaml \
+      --features="${FEATURES}" \
+      --set-vars="RELEASE=myrelease" \
+  > rendered-manifests.yaml
+
+<span class="comment"># Validate, review, then apply</span>
+kubectl apply -f rendered-manifests.yaml</code></pre>
+</div>
+
+<h2 id="vs-webhook">10. Post-Renderer vs Webhook</h2>
+
+<table>
+<thead>
+<tr><th>Aspect</th><th>Post-Renderer <span class="badge badge-green">Current</span></th><th>Mutating Webhook <span class="badge badge-blue">Future</span></th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Cluster infrastructure</strong></td><td>None required</td><td>Webhook server + TLS + Service</td></tr>
+<tr><td><strong>Installation</strong></td><td>Single binary</td><td>Helm chart + CRD + RBAC</td></tr>
+<tr><td><strong>When mutation happens</strong></td><td>Before apply (render time)</td><td>At admission (runtime)</td></tr>
+<tr><td><strong>Visibility</strong></td><td>See mutated YAML before apply</td><td>Mutations happen opaquely</td></tr>
+<tr><td><strong>Failure mode</strong></td><td>Pipeline stops; no partial apply</td><td>Pod creation blocked or bypassed</td></tr>
+<tr><td><strong>Scope</strong></td><td>Helm releases only</td><td>All pod creation (kubectl, operators, etc.)</td></tr>
+<tr><td><strong>Auditing</strong></td><td>git diff on rendered YAML</td><td>Audit logs + annotations</td></tr>
+<tr><td><strong>Dry-run</strong></td><td>Built-in <code>--dry-run</code></td><td>Requires separate tooling</td></tr>
+<tr><td><strong>Air-gapped support</strong></td><td>Works offline</td><td>Requires in-cluster connectivity</td></tr>
+<tr><td><strong>GitOps compatible</strong></td><td>Yes (pre-commit rendering)</td><td>Post-apply only</td></tr>
+</tbody>
+</table>
+
+<div class="card highlight-card">
+<h3>Recommended Strategy: Start with Post-Renderer, Graduate to Webhook</h3>
+<p>The post-renderer is the <strong>right choice</strong> for most teams getting started with Kontractor. It requires zero cluster-side infrastructure, integrates with existing CI/CD, and provides full visibility into mutations before they're applied.</p>
+<p>Once contract-driven deployment is proven, the same contract schema can drive a webhook for universal coverage (non-Helm workloads, operator-created pods, etc.).</p>
+</div>
+
+<h2 id="roadmap">11. Roadmap</h2>
+
+<table>
+<thead><tr><th>Phase</th><th>Milestone</th><th>Status</th></tr></thead>
+<tbody>
+<tr>
+<td><span class="badge badge-green">Phase 1</span></td>
+<td><strong>CLI Validator</strong> — Parse and display contract contents</td>
+<td>Done (kontractor-validate)</td>
+</tr>
+<tr>
+<td><span class="badge badge-green">Phase 2</span></td>
+<td><strong>Helm Post-Renderer</strong> — Mutate charts via contract</td>
+<td>Done (this report)</td>
+</tr>
+<tr>
+<td><span class="badge badge-orange">Phase 3</span></td>
+<td><strong>Contract Discovery</strong> — OCI annotations, in-chart contracts</td>
+<td>Planned</td>
+</tr>
+<tr>
+<td><span class="badge badge-orange">Phase 4</span></td>
+<td><strong>Validation Mode</strong> — Verify existing charts against contracts</td>
+<td>Planned</td>
+</tr>
+<tr>
+<td><span class="badge badge-blue">Phase 5</span></td>
+<td><strong>Mutating Webhook</strong> — In-cluster admission controller</td>
+<td>Future</td>
+</tr>
+<tr>
+<td><span class="badge badge-blue">Phase 6</span></td>
+<td><strong>Contract Registry</strong> — Central contract discovery service</td>
+<td>Future</td>
+</tr>
+</tbody>
+</table>
+
+<div class="diagram" style="text-align: left;">
+<pre style="background: transparent; border: none; margin: 0; padding: 0;"><code>Evolution Path:
+
+  Phase 1          Phase 2            Phase 3            Phase 5
+  ┌──────┐    ┌─────────────┐    ┌──────────────┐    ┌───────────┐
+  │ CLI  │ →  │ Post-       │ →  │ OCI-embedded │ →  │ Admission │
+  │Verify│    │ Renderer    │    │ Contracts    │    │ Webhook   │
+  └──────┘    └─────────────┘    └──────────────┘    └───────────┘
+    ▲              ▲                    ▲                  ▲
+    │              │                    │                  │
+  validate     mutate at           auto-discover      mutate at
+  contracts    render time         from images        runtime</code></pre>
+</div>
+
+<hr style="margin: 3rem 0;">
+
+<div class="card" style="text-align: center; background: #f0fdf4;">
+<p style="font-size: 1.1rem; font-weight: 600; margin: 0;">The chart author writes the template. The contract author declares requirements. The post-renderer bridges the gap.</p>
+<p style="color: var(--text-secondary); margin: 0.5rem 0 0;">Zero cluster infrastructure. Full visibility. Deterministic mutations.</p>
+</div>
+
+</body>
+</html>
